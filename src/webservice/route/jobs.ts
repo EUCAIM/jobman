@@ -10,6 +10,7 @@ import type JobDetails from '../../common/model/JobDetails.js';
 import type JobInfo from '../../common/model/JobInfo.js';
 import type Page from '../../common/model/Page.js';
 import type JobLog from '../../common/model/JobLog.js';
+import type JobSubmiSuccess from '../../common/model/JobSubmitSuccess.js';
 
 
 const jobsRouter = function(oidcAuth: OidcAuth, km: KubeManager) {
@@ -20,7 +21,7 @@ const jobsRouter = function(oidcAuth: OidcAuth, km: KubeManager) {
   });
 
   routerObj.post('/', async (req: Request, res: Response, next: NextFunction) => {
-    commonRequest<null>(req, res, next, oidcAuth, km.submit.bind(km, req.body as SubmitProps));
+    commonRequest<JobSubmiSuccess | string | null>(req, res, next, oidcAuth, km.submit.bind(km, req.body as SubmitProps));
   });
 
   routerObj.delete('/', async (req: Request, res: Response, next: NextFunction) => {

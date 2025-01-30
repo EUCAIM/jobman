@@ -14,6 +14,7 @@ import type Page from "../../common/model/Page.js";
 import type ImageDetails from "../../common/model/ImageDetails.js";
 import type KubeResourcesFlavor from "../../common/model/KubeResourcesFlavor.js";
 import type JobLog from "../../common/model/JobLog.js";
+import type JobSubmiSuccess from "../../common/model/JobSubmitSuccess.js";
 
 export default class RestService {
 
@@ -30,8 +31,8 @@ export default class RestService {
         return this.commonCall<QueueResultDisplay | null>("/queue/", "GET");
     }
 
-    public async submit(props: SubmitProps): Promise<KubeOpReturn<null>> {
-        return this.commonCall<null>("/jobs/", "POST", props);
+    public async submit(props: SubmitProps): Promise<KubeOpReturn<null | string | JobSubmiSuccess>> {
+        return this.commonCall<null | string | JobSubmiSuccess>("/jobs/", "POST", props);
     }
 
     public async list(): Promise<KubeOpReturn<Page<JobInfo> | null>> {
@@ -82,7 +83,13 @@ export default class RestService {
                     const txt = await r.text();
                     let resp: any = null;
                     if (txt) {
-                        resp = JSON.parse(txt) as T;
+                        try {
+                            resp = JSON.parse(txt) as T;
+                        } catch (e) {
+                            console.error(resp);
+                        }
+                        resp = txt;
+                        
                     }                   
                     
                     if (r.status >=200 && r.status <= 299) {
