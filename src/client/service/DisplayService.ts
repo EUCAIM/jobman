@@ -1,0 +1,317 @@
+import { marked } from "marked";
+import util  from 'node:util';
+import { Table } from "console-table-printer";
+import RestService from "./RestService.js";
+import type { SettingsClient } from "../model/SettingsClient.js";
+import QueueResult from "../../common/model/QueueResult.js";
+import { KubeOpReturn, KubeOpReturnStatus } from "../../common/model/KubeOpReturn.js";
+import type ImageDetails from "../../common/model/ImageDetails.js";
+import type ImageDetailsProps from "../../common/model/args/ImageDetailsProps.js";
+import type SubmitProps from "../../common/model/args/SubmitProps.js";
+import type DetailsProps from "../../common/model/args/DetailsProps.js";
+import type LogProps from "../../common/model/args/LogProps.js";
+import type DeleteProps from "../../common/model/args/DeleteProps.js";
+import type KubeResourcesFlavor from "../../common/model/KubeResourcesFlavor.js";
+import JobInfo from "../../common/model/JobInfo.js";
+import TerminalRenderer from "marked-terminal";
+import type QueueResultDisplay from "../../common/model/QueueResultDisplay.js";
+import type Page from "../../common/model/Page.js";
+
+type SimpleMsgCallbFunction = (...args: any[]) => void;
+
+
+export default class DisplayService {
+    
+    /**
+     * The default number of columns used by all commands that output a tABLE 
+     */
+    public static DEFAULT_NO_COLUMNS = 80;
+
+    /**
+     * The no of characters used to create a margin for a column
+     */
+    public static TABLE_COL_MARGIN = 8;
+
+    protected km: RestService;
+
+    protected options: Intl.DateTimeFormatOptions = {
+        year: 'numeric', month: 'numeric', day: 'numeric',
+        hour: 'numeric', minute: 'numeric', second: 'numeric',
+        hour12: false,
+        timeZoneName: 'short'
+      };
+
+    constructor(settings: SettingsClient, apiToken: string) {
+        this.km = new RestService(settings, apiToken);
+        util.inspect.defaultOptions.maxArrayLength = null;
+    }
+
+    public queue(): void {
+        this.km.queue()
+            .then((r: KubeOpReturn<QueueResultDisplay | null>) => this.simpleMsg(r,  () => {
+                    if (r.payload) {
+                        const enabledColumns: string[] = ["Flavor", "CPUs/Memory/GPUs", "Jobs pending", "Jobs running"];
+                        const totalNoColsAvailable = this.getTerminalNoCols() - (enabledColumns.length  * DisplayService.TABLE_COL_MARGIN);
+                        const t = new Table({
+                            enabledColumns,
+                            columns: [],
+                            computedColumns:[
+                                {
+                                    name: "Flavor",
+                                    maxLen: Math.floor(totalNoColsAvailable * 0.45),
+                                    function: (row: QueueResult) => row.flavor ?? "<no label>",
+                                    alignment: 'center'
+                                },
+                                {
+                                    name: "CPUs/Memory/GPUs",
+                                    maxLen: Math.floor(totalNoColsAvailable * 0.25),
+                                    function: (row: QueueResult) => `${row.cpu ?? "-"}/${row.memory ?? "-"}/${row.gpu ?? "-"}`, 
+                                    alignment: 'center'
+                                },
+                                {
+                                    name: "Jobs pending",
+                                    maxLen: Math.floor(totalNoColsAvailable * 0.15),
+                                    function: (row: QueueResult) => row.totalPending,
+                                    alignment: 'center'
+                                },
+                                {
+                                    name: "Jobs running",
+                                    maxLen: Math.floor(totalNoColsAvailable * 0.15),
+                                    function: (row: QueueResult) => row.totalRunning,
+                                    alignment: 'center'
+                                }
+                            ]
+                        });
+                        t.addRows(Object.values(r.payload.result));
+                        t.printTable();
+                        console.log(`Last queue update on: ${new Intl.DateTimeFormat('en', { year: 'numeric', month: 'short', day: '2-digit', hour: '2-digit', minute: '2-digit', second: '2-digit' }).format(new Date(r.payload.updated))}`)
+                    } else {
+                        this.simpleMsg(new KubeOpReturn(KubeOpReturnStatus.Error, "Queue of active jobs not available", null))
+                    }
+                }
+            ))
+            .catch(e => this.simpleMsg(new KubeOpReturn(KubeOpReturnStatus.Error,  e.message ?? String(e), null)));        
+    }
+
+    public images(): void {
+        this.km.images().then(r => this.simpleMsg(r, 
+                () => {
+                    const enabledColumns: string[] = ["name", "Tags List"];
+                    const totalNoColsAvailable = this.getTerminalNoCols() - (enabledColumns.length  * DisplayService.TABLE_COL_MARGIN);
+                    
+                    const t = new Table({
+                        enabledColumns,
+                        columns: [
+                          {
+                            name: "name",
+                            maxLen: Math.floor(totalNoColsAvailable * 0.25),
+                            title: "Image Name",
+                            alignment: 'left'
+                          }
+                        ],
+                        computedColumns:[
+                            {
+                                name: "Tags List",
+                                maxLen: Math.floor(totalNoColsAvailable * 0.75),
+                                function: (row: ImageDetails) => row.tags.join("  "), 
+                                alignment: 'left'
+                            }
+                        ]
+                    });
+                    t.addRows(r.payload?.data);
+                    t.printTable();
+                }))
+                .catch(e => this.simpleMsg(new KubeOpReturn(KubeOpReturnStatus.Error,  e.message ?? String(e), null)));
+    }
+
+    public imageDetails(props: ImageDetailsProps): void {
+        //marked.use(markedTerminal());
+
+        marked.setOptions({
+            // Define custom renderer
+            renderer: new TerminalRenderer()
+          });
+        this.km.imageDescription(props)
+            .then(r => this.simpleMsg(r,  () => console.log(marked(r.payload ?? "&lt;__No description available__&gt;"))))
+            .catch(e => this.simpleMsg(new KubeOpReturn(KubeOpReturnStatus.Error,  e.message ?? String(e), null)));
+
+    }
+
+    public submit(props: SubmitProps): void {
+        this.km.submit(props)
+            .then(r => {
+                    if (r.payload) {
+                        if (typeof r.payload === "string") {
+                            this.simpleMsg(new KubeOpReturn(KubeOpReturnStatus.Success, r.payload, null));
+                        } else if (typeof r.payload === "object") {
+                            this.simpleMsg(r,  () => console.log(JSON.stringify(r.payload)));
+                        } else {
+                            throw new Error(`Return of the submit call having type '${typeof r.payload}' not handled.`);
+                        }
+                    } else {
+                        this.simpleMsg(new KubeOpReturn(KubeOpReturnStatus.Success, "Job successfully submitted.", null));
+                    }
+            })
+            .catch(e => this.simpleMsg(new KubeOpReturn(KubeOpReturnStatus.Error, e.message ?? String(e), null)));
+    }
+    
+
+    public list(): void {
+        // marked.use(markedTerminal({
+        //     width: this.getTerminalNoCols(),
+        //     reflowText: true
+        //   }));
+
+        // marked.setOptions({
+        //     renderer: new TerminalRenderer({
+        //       width: this.getTerminalNoCols(),
+        //       reflowText: true
+        //     })
+        //   });
+        this.km.list()
+            .then((r: KubeOpReturn<Page<JobInfo> | null>) => this.simpleMsg(r, 
+                () => {
+                    const enabledColumns: string[] = ["name", "status", "flavor", "Launch Date"];
+                    const totalNoColsAvailable = this.getTerminalNoCols() - (enabledColumns.length  * DisplayService.TABLE_COL_MARGIN);
+                    const t = new Table({
+                        enabledColumns,
+                        columns: [
+                          {
+                            name: "name",
+                            maxLen: Math.floor(totalNoColsAvailable * 0.50),
+                            title: "Job Name",
+                            alignment: 'left'
+                          },
+                          {
+                            name: "flavor",
+                            maxLen: Math.floor(totalNoColsAvailable * 0.10),
+                            title: "Flavor",
+                            alignment: 'center'
+                          },
+                          {
+                            name: "status",
+                            maxLen: Math.floor(totalNoColsAvailable * 0.10),
+                            title: "Status",
+                            alignment: 'center'
+                          }
+                        ],
+                        computedColumns:[
+                            {
+                                name: "Launch Date",
+                                maxLen: Math.floor(totalNoColsAvailable * 0.30),
+                                function: (row: JobInfo) => row.dateLaunched ? new Intl.DateTimeFormat('en-GB', this.options)
+                                                .format(row.dateLaunched) : "-",
+                                alignment: 'center'
+                            }
+                        ]
+                    });
+                    t.addRows(r.payload?.data);
+                    t.printTable();
+                }))
+            .catch(e => this.simpleMsg(new KubeOpReturn(KubeOpReturnStatus.Error,  e.message ?? String(e), null)));
+    }
+
+    public details(props: DetailsProps): void {
+        this.km.details(props)
+            .then(r => this.simpleMsg(r, () => console.dir(r.payload, {depth: null})))
+            .catch(e => this.simpleMsg(new KubeOpReturn(KubeOpReturnStatus.Error,  e.message ?? String(e), null)));
+
+    }
+
+    public log(props: LogProps): void {
+        this.km.log(props)
+            .then(r => this.simpleMsg(r, () => console.log("----Log begin----\n\n", "\x1b[36m", r.payload?.stdOut ?? "", "\x1b[0m", "\n----Log end----")))
+            .catch(e => this.simpleMsg(new KubeOpReturn(KubeOpReturnStatus.Error,  e.message ?? String(e), null)));
+
+    }
+
+    public delete(props: DeleteProps): void {
+        this.km.delete(props)
+            .then(r => {
+                this.simpleMsg(new KubeOpReturn(KubeOpReturnStatus.Success, "Job(s) delete intent(s) submitted successfully. It may take a while until Kubernetes performs the operation(s).", null));
+            })
+            .catch(e => this.simpleMsg(new KubeOpReturn(KubeOpReturnStatus.Error,  e.message ?? String(e), null)));
+    }
+
+    public resourcesFlavors(): void {
+        this.km.resourcesFlavors()
+            .then((r: KubeOpReturn<Page<KubeResourcesFlavor> | null>) => this.simpleMsg(r, 
+                () => {
+                    const enabledColumns: string[] = ["name", "CPU*", "Memory*", "GPU**", "maxRunTime", "description"];
+                    const totalNoColsAvailable = this.getTerminalNoCols() - (enabledColumns.length  * DisplayService.TABLE_COL_MARGIN);
+                    
+                    const t = new Table({
+                        enabledColumns,
+                        columns: [
+                            {
+                            name: "name",
+                            maxLen: Math.floor(totalNoColsAvailable * 0.15),
+                            title: "Name",
+                            alignment: 'left'
+                            },
+                            {
+                            name: "maxRunTime",
+                            maxLen: Math.floor(totalNoColsAvailable * 0.1),
+                            title: "Max run time***",
+                            alignment: 'left'
+                            },
+                            {
+                            name: "description",
+                            maxLen: Math.floor(totalNoColsAvailable * 0.30),
+                            title: "Description",
+                            alignment: 'left'
+                            }
+                        ],
+                        computedColumns:[
+                            {
+                                name: "CPU*",
+                                maxLen: Math.floor(totalNoColsAvailable * 0.15),
+                                function: (row: KubeResourcesFlavor) => `${row.resources?.requests?.["cpu"] ?? "-"} / ${row.resources?.limits?.["cpu"] ?? "-"}`,
+                                alignment: 'center'
+                            },
+                            {
+                                name: "Memory*",
+                                maxLen: Math.floor(totalNoColsAvailable * 0.15),
+                                function: (row: KubeResourcesFlavor) => `${row.resources?.requests?.["memory"] ?? "-"} / ${row.resources?.limits?.["memory"] ?? "-"}`,
+                                alignment: 'center'
+                            },
+                            {
+                                name: "GPU**",
+                                maxLen: Math.floor(totalNoColsAvailable * 0.15),
+                                function: (row: KubeResourcesFlavor) => 
+                                    `${row.resources?.requests?.["nvidia.com/gpu"] ?? "-"}`
+                                    + ` / ${row.resources?.requests?.["amd.com/gpu"] ?? "-"}`
+                                    + ` / ${row.resources?.requests?.["intel.com/gpu"] ?? "-"}`,
+                                alignment: 'center'
+                            }
+                        ]
+                    });
+                    t.addRows(r.payload?.data);
+                    t.printTable();
+                    console.log();
+                    console.log("*First value is for request, second for limits");
+                    console.log("**First value represents the total count of NVIDIA GPUS, followed by that of AMD GPUs, and, finally, Intel's");
+                    console.log("***In hours")
+                }))
+            .catch(e => this.simpleMsg(new KubeOpReturn(KubeOpReturnStatus.Error,  e.message ?? String(e), null)));
+    }
+
+    protected simpleMsg(op: KubeOpReturn<any>, displayFunc: SimpleMsgCallbFunction | undefined = undefined): void {
+        if (op.isOk()) {
+            if (displayFunc) {
+                displayFunc(op.payload);
+            } else {
+                console.log("\x1b[32m", "[SUCCESS]", "\x1b[0m", op.message);
+            }
+        } else if (op.isWarning()) {
+            console.log("\x1b[33m", "[WARNING]", "\x1b[0m", op.message);
+        } else {
+            console.error("\x1b[31m", "[ERROR]", "\x1b[0m", op.message);
+        }
+    }
+
+    protected getTerminalNoCols(): number {
+        return process.stdout.columns && process.stdout.columns > 0 ? process.stdout.columns : DisplayService.DEFAULT_NO_COLUMNS;
+    }
+
+}

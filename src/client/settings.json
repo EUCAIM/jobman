@@ -1,0 +1,11 @@
+{
+    "newVersion": {
+        "repository": null,
+        "packageJsonPath": null,
+        "customMessage": null,
+        "check": "24h"
+    },
+    "datasetsListEnvVar": "DATASETS_LIST",
+    "webServiceUrl": "",
+    "apiTokenEnvName": "JOBMAN_SERVICE_API_TOKEN"
+}
