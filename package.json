@@ -1,0 +1,73 @@
+{
+  "name": "jobman",
+  "version": "2.0.6-BETA",
+  "main": "./dist/index.ts",
+  "exports": {
+    "default": "./src/"
+  },
+  "bin": {
+    "jobman": "./bin/jobman",
+    "jobman-webservice": "./bin/jobman-webservice"
+  },
+  "description": "The Kubernetes job manager",
+  "dependencies": {
+    "@kubernetes/client-node": "^0.18.1",
+    "babel-plugin-transform-import-meta": "^2.2.1",
+    "console-table-printer": "^2.12.0",
+    "deepmerge": "^4.3.1",
+    "loglevel": "^1.9.1",
+    "marked": "^9.1.6",
+    "marked-terminal": "^6.1.1",
+    "node-fetch":"^3.3.2",
+    "tar-stream": "3.1.5",
+    "uuid": "^10.0.0",
+    "express": "^4.19.2",
+    "http-errors": "^2.0.0",
+    "http-proxy-middleware": "2.0.3",
+    "compare-versions": "^6.1.1"
+  },
+  "plugins": [
+    "babel-plugin-transform-import-meta"
+  ],
+  "scripts": {
+    "start": "ts-node-esm src/client/index.ts",
+    "prod": "node dist/client/index.js",
+    "dev": "nodemon --exec 'npm start'",
+    "start-webservice": "ts-node-esm src/webservice/index.ts",
+    "prod-webservice": "node dist/webservice/index.js",
+    "dev-webservice": "nodemon --exec 'npm start-webservice'",
+    "test": "NODE_OPTIONS=--experimental-vm-modules npx jest",
+    "build": "node_modules/.bin/tsc && cp usage.md examples.md ./dist/"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/asalic/jobman.git"
+  },
+  "author": "Andy S Alic (asalic)",
+  "license": "SEE LICENSE IN LICENSE",
+  "bugs": {
+    "url": "https://github.com/asalic/jobman/issues"
+  },
+  "homepage": "https://github.com/asalic/jobman#readme",
+  "resolutions": {
+    "@typescript-eslint/parser": "^7.11.0",
+    "@typescript-eslint/eslint-plugin": "^7.11.0"
+  },
+  "devDependencies": {
+    "ts-node": "^10.9.2",
+    "@jest/globals": "^29.7.0",
+    "@types/jest": "^29.5.12",
+    "@types/node": "^20.12.13",
+    "@types/tar-stream": "^3.1.3",
+    "@types/express": "4.17.21",
+    "@types/marked": "^6.0.0",
+    "@types/marked-terminal": "^6.1.1",
+    "@types/uuid": "10.0.0",
+    "jest": "^29.4.1",
+    "nodemon": "^2.0.20",
+    "ts-jest": "^29.0.5",
+    "tslib": "^2.6.2",
+    "typescript": "^5.4.5"
+  },
+  "type": "module"
+}

@@ -1,0 +1,52 @@
+{
+    "jobsQueue": {
+        "namespace": "default",
+        "configmap": "jobman-queue-position",
+        "gpuResources": [ ]
+    },
+    "job": {
+        "userNameAnnotation": "username",
+        "protectedNamespace": "jobman-exec",
+        "annotations": null,
+        "defaultImage": null,
+        "imagePrefix": null,
+        "userConfigmap": null,
+        "priorityClassName": null,
+        "securityContext": {
+            "runAsUser": 0,
+            "runAsGroup": 0,
+            "fsGroup": 0,
+            "supplementalGroups": []
+        },
+        "resources": {
+            "default": null,
+            "label": null,
+            "predefined": []
+        }
+    },
+    "kubeConfig": {
+        "type": "file",
+        "file": "/kube_config.json"
+    },
+    "harborProjects": [
+            {
+                "name": "chaimeleon-library-batch",
+                "token": null,
+                "baseUrl": "https://harbor.chaimeleon-eu.i3m.upv.es"
+            },
+            {
+                "name": "chaimeleon-library-batch-protected",
+                "token": "",
+                "baseUrl": "https://harbor.chaimeleon-eu.i3m.upv.es"
+            }
+        ],
+    "oidc": {
+        "apiTokenAttributeName": "",
+        "url": "",
+        "realm": "CHAIMELEON",
+        "clientId": "jobman-service",
+        "clientSecret": ""
+    },
+    "port": 9000,
+    "path": "/"
+}
