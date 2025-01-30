@@ -8,7 +8,7 @@ RUN apt-get -y update \
     && curl -fsSL https://deb.nodesource.com/setup_22.x | bash - \
     && apt-get install -y nodejs
 
-COPY jest.config.* package-lock.json package.json tsconfig.json /opt/jobman/
+COPY jest.config.* package.json tsconfig.json /opt/jobman/
 COPY src /opt/jobman/src
 COPY bin /opt/jobman/bin
 
