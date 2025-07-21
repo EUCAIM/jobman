@@ -5,7 +5,7 @@ import RestService from "./RestService.js";
 import type { SettingsClient } from "../model/SettingsClient.js";
 import QueueResult from "../../common/model/QueueResult.js";
 import { KubeOpReturn, KubeOpReturnStatus } from "../../common/model/KubeOpReturn.js";
-import type ImageDetails from "../../common/model/ImageDetails.js";
+import type ImageInfo from "../../common/model/ImageInfo.js";
 import type ImageDetailsProps from "../../common/model/args/ImageDetailsProps.js";
 import type SubmitProps from "../../common/model/args/SubmitProps.js";
 import type DetailsProps from "../../common/model/args/DetailsProps.js";
@@ -113,7 +113,7 @@ export default class DisplayService {
                             {
                                 name: "Tags List",
                                 maxLen: Math.floor(totalNoColsAvailable * 0.75),
-                                function: (row: ImageDetails) => row.tags.join("  "), 
+                                function: (row: ImageInfo) => row.tags.join("  "), 
                                 alignment: 'left'
                             }
                         ]

@@ -16,7 +16,7 @@ import type SubmitProps from '../../common/model/args/SubmitProps.js';
 //import NotImplementedException from '../model/exception/NotImplementedException.js';
 import { KubeOpReturn, KubeOpReturnStatus } from '../../common/model/KubeOpReturn.js';
 import UnhandledValueException from '../model/exception/UnhandledValueException.js';
-import type ImageDetails from '../../common/model/ImageDetails.js';
+import type ImageInfo from '../../common/model/ImageInfo.js';
 import type HarborRepository from '../model/HarborRepository.js';
 import type { HarborRespositoryArtifact } from '../model/HarborRespositoryArtifact.js';
 import KubeException from '../model/exception/KubeException.js';
@@ -40,6 +40,8 @@ import type JobDetails from '../../common/model/JobDetails.js';
 import type Page from '../../common/model/Page.js';
 import type JobLog from '../../common/model/JobLog.js';
 import type JobSubmiSuccess from '../../common/model/JobSubmitSuccess.js';
+import type JobErrors from '../model/JobErrors.js';
+import type { ClusterWarning, ContainerError } from '../model/JobErrors.js';
 
 
 export default class KubeManager {
@@ -138,9 +140,9 @@ export default class KubeManager {
             let prefix = "";
             const [imgNm, imgTag] = imageNmTag.split(":");
             for (const hp of this.settings.harborProjects) {
-                const projImgs: KubeOpReturn<ImageDetails[]>  = await this.getHarborImages(hp);
+                const projImgs: KubeOpReturn<ImageInfo[]>  = await this.getHarborImages(hp);
                 if (projImgs.isOk() && projImgs.payload) {
-                    const f:ImageDetails | undefined = projImgs.payload.find((id: ImageDetails) => id.name === imgNm && id.tags.find(t => t === imgTag) !== undefined);
+                    const f:ImageInfo | undefined = projImgs.payload.find((id: ImageInfo) => id.name === imgNm && id.tags.find(t => t === imgTag) !== undefined);
                     if (f) {
                         const u = new URL(hp.baseUrl);
                         prefix = `${u.hostname}${u.port !== "" ? ":" + u.port : ""}/${hp.name}/`;
@@ -281,10 +283,10 @@ export default class KubeManager {
         return new KubeOpReturn(KubeOpReturnStatus.Error, `No image with name '${props.image}' found.`, null);
     }
 
-    public async images(userId: string): Promise<KubeOpReturn<Page<ImageDetails> | null>> {
-        const imageDetails: ImageDetails[] = [];
+    public async images(userId: string): Promise<KubeOpReturn<Page<ImageInfo> | null>> {
+        const imageDetails: ImageInfo[] = [];
         for (const hp of this.settings.harborProjects) {
-            const projImgs: KubeOpReturn<ImageDetails[]>  = await this.getHarborImages(hp);
+            const projImgs: KubeOpReturn<ImageInfo[]>  = await this.getHarborImages(hp);
             if (projImgs.isOk() && projImgs.payload) {
                 imageDetails.push(...projImgs.payload);
             } else {
@@ -300,14 +302,38 @@ export default class KubeManager {
             const jn = this.getInternalJobName(userId, props.jobName);
             const r: V1Job = (await this.k8sApi.readNamespacedJob(jn, this.getNamespace())).body;
                 if (this.userOwnsJob(userId, r)) {
-                    const jd: JobDetails = { name: r.metadata?.name ?? "<Unknown>",
-                        uid: r.metadata?.uid,
-                        status: await this.getStatusJob(r.metadata?.name ?? "", r.status, userId),
-                        dateLaunched: r.metadata?.creationTimestamp?.getTime() ?? null,
-                        position: 0,//jobsQueue?.data?.["jobs"]?.find(j => j.name === jn && j.user === this.getUsername())?.
-                        flavor: r.metadata?.annotations?.["chaimeleon.eu/jobResourcesFlavor"] ?? "-"
+                    const pods = await this.k8sCoreApi.listNamespacedPod(this.getNamespace(), undefined, undefined, undefined, undefined, `job-name=${jn}`);
+                    const pod = pods.body.items[0]; 
+                    if (pod) {
+                        let executionDuration: number | null = null;
+                        if (pod.status?.containerStatuses?.[0]?.state?.terminated?.startedAt && 
+                            pod.status?.containerStatuses?.[0]?.state?.terminated?.finishedAt) {
+                            executionDuration = Math.round((pod.status?.containerStatuses?.[0]?.state?.terminated?.finishedAt.getTime() -
+                                pod.status?.containerStatuses?.[0]?.state?.terminated?.startedAt.getTime())/1000);
+                        }
+                        const errors: string[] = [];
+                        const jobErrors: JobErrors = await this.getJobErrors(userId, props.jobName);
+                        if (jobErrors.containerError) {
+                            errors.push(`Container error with exit code '${jobErrors.containerError.exitCode}': ${jobErrors.containerError.reason} - ${jobErrors.containerError.message}`);
+                        }
+                        errors.push(...jobErrors.clusterWarnings.map(cw => `Cluster error: ${cw.reason} - ${cw.message}`))
+                        const jd: JobDetails = { name: props.jobName,//r.metadata?.name ?? "<Unknown>",
+                            uid: r.metadata?.uid ?? null,
+                            status: await this.getStatusJob(r.metadata?.name ?? "", r.status, userId),
+                            createdAt: r.metadata?.creationTimestamp?.toISOString() ?? null,
+                            position: 0,//jobsQueue?.data?.["jobs"]?.find(j => j.name === jn && j.user === this.getUsername())?.
+                            flavor: r.metadata?.annotations?.["chaimeleon.eu/jobResourcesFlavor"] ?? "-",
+                            exitCode: pod.status?.containerStatuses?.[0]?.state?.terminated?.exitCode ?? null,
+                            startedAt: pod.status?.containerStatuses?.[0]?.state?.running?.startedAt?.toISOString() 
+                                ?? pod.status?.containerStatuses?.[0]?.state?.terminated?.startedAt?.toISOString() ?? null,
+                            finishedAt: pod.status?.containerStatuses?.[0]?.state?.terminated?.finishedAt?.toISOString() ?? null,
+                            executionDuration,
+                            errors
+                        }
+                        return new KubeOpReturn(KubeOpReturnStatus.Success, undefined, jd);
+                    } else {
+                        return new KubeOpReturn(KubeOpReturnStatus.Error, `Can't get the pods list for job '${props.jobName}'`, null);
                     }
-                    return new KubeOpReturn(KubeOpReturnStatus.Success, undefined, jd);
 
                 } else {
                     return  new KubeOpReturn(KubeOpReturnStatus.Error, `Job '${props.jobName}' not found.`, null);
@@ -417,7 +443,7 @@ export default class KubeManager {
 
     }
 
-    protected async getHarborImages(hp: HarborProject): Promise<KubeOpReturn<ImageDetails[]>> {
+    protected async getHarborImages(hp: HarborProject): Promise<KubeOpReturn<ImageInfo[]>> {
         const projsUrl = `${hp.baseUrl}/api/v2.0/projects`
         const reposUrl = `${projsUrl}/${hp.name}/repositories`;
         console.log(`Getting repos from ${reposUrl}`);
@@ -428,7 +454,7 @@ export default class KubeManager {
         let pageNum = 1;
         let reposCnt = 0;
         const pageSize = 100;
-        const result: ImageDetails[] = [];
+        const result: ImageInfo[] = [];
         let error = false;
         do {
             const response: Response = await this.fetchCustom(`${reposUrl}?page=${pageNum}&page_size=${pageSize}`, 
@@ -475,6 +501,43 @@ export default class KubeManager {
         else
             return new KubeOpReturn(KubeOpReturnStatus.Success, undefined, result);
 
+    }
+
+    protected async getJobErrors(userId: string, jobName: string): Promise<JobErrors> {
+        const internalJobName = this.getInternalJobName(userId, jobName);
+        const podsRes = await this.k8sCoreApi.listNamespacedPod(this.getNamespace(), undefined, undefined, undefined, undefined, `job-name=${internalJobName}`);
+        const pod = podsRes.body.items?.[0];
+        if (!pod) throw new Error(`No Pod found for Job: ${jobName}`);
+
+        const podName = pod.metadata?.name;
+        const containerStatus = pod.status?.containerStatuses?.[0];
+        const termination = containerStatus?.state?.terminated;
+
+        let containerError: ContainerError | null = null;
+
+        if (termination?.exitCode !== undefined && termination?.exitCode !== 0) {
+            containerError = {
+                exitCode: termination?.exitCode,
+                reason: termination?.reason,
+                message: termination?.message
+            };
+        }
+        
+
+        // Cluster-level warning events
+        const eventsRes = await this.k8sCoreApi.listNamespacedEvent(this.getNamespace(), undefined, undefined, undefined, `involvedObject.name=${podName}`);
+        const clusterWarnings: ClusterWarning[] = eventsRes.body.items
+            .filter(ev => ev.type === 'Warning')
+            .map(ev => ({
+            reason: ev.reason,
+            message: ev.message,
+            lastTimestamp: ev.lastTimestamp
+            }));
+
+        return {
+            containerError,
+            clusterWarnings
+        };
     }
 
     protected getAnnotations(kr: KubeResourcesFlavor, props: SubmitProps, userId: string): { [key: string]: string; } | null {
