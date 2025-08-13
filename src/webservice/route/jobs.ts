@@ -11,9 +11,10 @@ import type JobInfo from '../../common/model/JobInfo.js';
 import type Page from '../../common/model/Page.js';
 import type JobLog from '../../common/model/JobLog.js';
 import type JobSubmiSuccess from '../../common/model/JobSubmitSuccess.js';
+import type HarborManager from '../service/HarborManager.js';
 
 
-const jobsRouter = function(oidcAuth: OidcAuth, km: KubeManager) {
+const jobsRouter = function(oidcAuth: OidcAuth, km: KubeManager, hm: HarborManager) {
   let routerObj = express.Router();
   
   routerObj.get('/', async (req: Request, res: Response, next: NextFunction) => {
@@ -21,7 +22,7 @@ const jobsRouter = function(oidcAuth: OidcAuth, km: KubeManager) {
   });
 
   routerObj.post('/', async (req: Request, res: Response, next: NextFunction) => {
-    commonRequest<JobSubmiSuccess | string | null>(req, res, next, oidcAuth, km.submit.bind(km, req.body as SubmitProps));
+    commonRequest<JobSubmiSuccess | string | null>(req, res, next, oidcAuth, km.submit.bind(km, hm, req.body as SubmitProps));
   });
 
   routerObj.delete('/', async (req: Request, res: Response, next: NextFunction) => {

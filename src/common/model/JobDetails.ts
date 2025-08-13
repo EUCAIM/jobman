@@ -1,11 +1,13 @@
-import type EJobStatus from "./EJobStatus";
+import type EJobStatus from "./EJobStatus.js";
 
 export interface PodDetails {
-
+    name: string | null;
+    containers: ContainerDetails[];
 }
 
 export interface ContainerDetails {
-
+    name: string | null;
+    exitCode: number | null | undefined;
 }
 
 export default interface JobDetails {
@@ -21,4 +23,5 @@ export default interface JobDetails {
     finishedAt: string | null;
     executionDuration: number | null;
     errors: string[];
+    pods: PodDetails[];
 }

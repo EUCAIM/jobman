@@ -20,6 +20,7 @@ import queueRouter from './route/queue.js';
 import OidcAuth from './service/OidcAuth.js';
 import KubeManager from './service/KubeManager.js';
 import resourcesFlavorsRouter from './route/resources-flavors.js';
+import HarborManager from './service/HarborManager.js';
 
 
 //console.log(process.argv);
@@ -35,6 +36,7 @@ const settingsPath = values.settings ?? "";
 const appConf: SettingsWebService = AppConfLoader.getAppConf(settingsPath);//JSON.parse(fs.readFileSync(settingsPath, { encoding: 'utf8', flag: 'r' }));
 const oidcAuth = new OidcAuth(appConf);
 const km = new KubeManager(appConf);
+const hm = new HarborManager(appConf);
 // /const appConfig = AppConfig.get();
 console.log(`Jobman web service version '${process.env["npm_package_version"]}'`);
 const app: Express = express();
@@ -46,8 +48,8 @@ app.use(express.urlencoded({ extended: false }));
 //app.use(BodyParser.json({ limit: appConfig.resultPostSize }));
 //app.use(BodyParser.urlencoded({ extended: true }));
 //app.use(upload.array());
-app.use(appConf.path + "/jobs", jobsRouter(oidcAuth, km));
-app.use(appConf.path + "/images", imagesRouter(oidcAuth, km));
+app.use(appConf.path + "/jobs", jobsRouter(oidcAuth, km, hm));
+app.use(appConf.path + "/images", imagesRouter(oidcAuth, hm));
 app.use(appConf.path + "/queue", queueRouter(oidcAuth, km));
 app.use(appConf.path + "/resources-flavors", resourcesFlavorsRouter(oidcAuth, km));
 // 404 handler and pass to error handler

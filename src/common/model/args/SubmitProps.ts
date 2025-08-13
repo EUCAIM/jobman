@@ -10,4 +10,5 @@ export default interface SubmitProps {
     annotations?:  string | undefined;
     datasetsList: string;
     env?: EnvEntry[] | undefined;
+    logFile?: string;
 }

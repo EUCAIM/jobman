@@ -1,6 +1,6 @@
 FROM debian:sid-slim
 
-LABEL name=jobman
+LABEL name=jobman-webservice
 LABEL authors="Andy S Alic (asalic)"
 
 RUN apt-get -y update \
@@ -16,11 +16,12 @@ RUN cd /opt/jobman/ \
     && npm install \
     && npx tsc \
     && ln -s /opt/jobman/bin/jobman-webservice /usr/bin/ \
-    && chmod +x /opt/jobman/bin/jobman-webservice /usr/bin/ \
+    && chmod +x /opt/jobman/bin/jobman-webservice \
     && addgroup jobman --gid 1001 && useradd -m -u 1001 -g jobman jobman
 
 ENV SETTINGS_FILE /opt/jobman/src/webservice/settings.json
 
 USER jobman
 
-ENTRYPOINT jobman-webservice -s ${SETTINGS_FILE}
+ENTRYPOINT ["jobman-webservice"] 
+CMD ["-s", "${SETTINGS_FILE}"]

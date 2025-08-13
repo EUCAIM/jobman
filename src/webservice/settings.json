@@ -5,6 +5,9 @@
         "gpuResources": [ ]
     },
     "job": {
+        "serviceAccount": "jobman-k8s-logger-serviceaccount",
+        "serviceAccountTokenSecret": "jobman-k8s-logger-serviceaccount-secret",
+        "kubeRootCASecret": "kube-root-ca.crt",
         "userNameAnnotation": "username",
         "protectedNamespace": "jobman-exec",
         "annotations": null,
@@ -22,6 +25,10 @@
             "default": null,
             "label": null,
             "predefined": []
+        },
+        "k8sLogger": {
+            "image": "harbor.chaimeleon-eu.i3m.upv.es/chaimeleon-services/jobman-k8s-logger:latest",
+            "sleep": 15
         }
     },
     "kubeConfig": {

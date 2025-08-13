@@ -1,12 +1,14 @@
-import AbstractDto from "./AbstractDto.js";
 
-export default class  ImageDetails extends AbstractDto {
+export interface Tag {
+    name: string;
+    entrypoint: string[];
+    cmd: string[];
+}
+
+export default interface ImageDetails {
 
     name: string;
-    tags: string[]; 
-    desc?: string;
+    tags: Tag[];
+    desc: string | null | undefined;
 
-    public static override from(obj: any) {
-        return Object.assign(new ImageDetails(), obj);
-    }
 }

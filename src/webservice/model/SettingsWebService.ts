@@ -49,6 +49,9 @@ export interface SecurityContext {
 }
 
 export interface Job {
+    serviceAccount: string;
+    serviceAccountTokenSecret: string;
+    kubeRootCASecret: string;
     userNameAnnotation: string;
     annotationDatasetsList: string;
     annotations?: Annotation[] | null;
@@ -61,6 +64,7 @@ export interface Job {
     //affinity: Affinity;
     resources: Resources;
     protectedNamespace: string;
+    k8sLogger: K8sLogger;
 }
 
 export interface OidcSettings {
@@ -69,6 +73,12 @@ export interface OidcSettings {
     realm: string;
     clientId: string;
     clientSecret: string;
+}
+
+export interface K8sLogger {
+    image: string;
+    // in seconds
+    sleep: number;
 }
 
 export default interface HarborProject {
@@ -87,5 +97,4 @@ export interface SettingsWebService {
     oidc: OidcSettings;
     port: string;
     path: string;
-
 }
