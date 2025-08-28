@@ -24,4 +24,4 @@ ENV SETTINGS_FILE /opt/jobman/src/webservice/settings.json
 USER jobman
 
 ENTRYPOINT ["jobman-webservice"] 
-CMD ["-s", "${SETTINGS_FILE}"]
+CMD ["-s", "/opt/jobman/settings.json"]
