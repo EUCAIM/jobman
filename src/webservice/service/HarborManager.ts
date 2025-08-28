@@ -8,9 +8,10 @@ import { KubeOpReturnStatus, KubeOpReturn } from "../../common/model/KubeOpRetur
 import type { SettingsWebService } from "../model/SettingsWebService.js";
 import type HarborRepository from "../model/HarborRepository.js";
 import type HarborProject from "../model/SettingsWebService.js";
-import type ImageInfo from "../../common/model/ImageInfo.js";
+import type Artifact from "../../common/model/Artifact.js";
 import type Page from "../../common/model/Page.js";
 import type { HarborRespositoryArtifact } from "../model/HarborRespositoryArtifact.js";
+import type ImageRepo from "../../common/model/ImageRepo.js";
 
 export default class HarborManager {
 
@@ -50,10 +51,10 @@ export default class HarborManager {
         return new KubeOpReturn(KubeOpReturnStatus.Error, `No image with name '${props.image}' found.`, null);
     }
 
-    public async images(userId: string): Promise<KubeOpReturn<Page<ImageInfo> | null>> {
-        const imageDetails: ImageInfo[] = [];
+    public async images(userId: string): Promise<KubeOpReturn<Page<ImageRepo> | null>> {
+        const imageDetails: ImageRepo[] = [];
         for (const hp of this.settings.harborProjects) {
-            const projImgs: KubeOpReturn<ImageInfo[]>  = await this.getHarborImages(hp);
+            const projImgs: KubeOpReturn<ImageRepo[]>  = await this.getHarborImages(hp);
             if (projImgs.isOk() && projImgs.payload) {
                 imageDetails.push(...projImgs.payload);
             } else {
@@ -64,7 +65,7 @@ export default class HarborManager {
             total: imageDetails.length, skip: 0} );
     }
 
-    public async getHarborImages(hp: HarborProject): Promise<KubeOpReturn<ImageInfo[]>> {
+    public async getHarborImages(hp: HarborProject): Promise<KubeOpReturn<ImageRepo[]>> {
         const projsUrl = `${hp.baseUrl}/api/v2.0/projects`
         const reposUrl = `${projsUrl}/${hp.name}/repositories`;
         console.log(`Getting repos from ${reposUrl}`);
@@ -75,7 +76,7 @@ export default class HarborManager {
         let pageNum = 1;
         let reposCnt = 0;
         const pageSize = 100;
-        const result: ImageInfo[] = [];
+        const result: ImageRepo[] = [];
         let error = false;
         do {
             const response: Response = await this.fetchCustom(`${reposUrl}?page=${pageNum}&page_size=${pageSize}`, 
@@ -89,9 +90,9 @@ export default class HarborManager {
                 for (const repo of prjRepos) {
                     // Get repo name, remove project name 
                     const name: string = repo.name.substring(repo.name.indexOf("/") + 1, repo.name.length);
-                    const desc: string = repo.description;
-                    const tags: string[] = [];
-                    result.push({name, tags, desc})
+                    const description: string = repo.description;
+                    const artifacts: Artifact[] = []
+                    result.push({name, artifacts, description})
                     
                     const artsUrl = `${reposUrl}/${name}/artifacts`;
                     const rArtifacts: Response = await this.fetchCustom(`${artsUrl}?page_size=${repo.artifact_count}`, 
@@ -101,9 +102,26 @@ export default class HarborManager {
                         });
                     if (rArtifacts.ok) {
                         const arts: HarborRespositoryArtifact[] = await rArtifacts.json() as HarborRespositoryArtifact[];
+                        
                         for (const art of arts ) {
-                            if (art.tags !== null)
-                                tags.push(...art.tags.map(t => t.name));
+                            artifacts.push({
+                                digest: art.digest,
+                                tags: art.tags !== null ? art.tags.map(t => t.name) : []
+                            })
+                            // console.log(art);
+                            // if (art.tags !== null) {
+                            //     for (const tag of art.tags) {
+                            //         const artUrl = `${artsUrl}/${tag.name}`;
+                            //         const artifact: Response = await this.fetchCustom(`${artUrl}`, 
+                            //         {
+                            //             agent,
+                            //             ...hp.token && {headers: [["Autorization", `Bearer ${hp.token}`]]}
+                            //         });
+                            //         console.log(await artifact.json());
+                            //     }
+                            //     // if (art.tags !== null)
+                            //     //     tags.push(...art.tags.map(t => t.name));
+                            // }
                         }
                     } else {
                         console.warn(`Unable to load artifacts from ${artsUrl}`);

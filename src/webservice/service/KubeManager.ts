@@ -15,7 +15,7 @@ import type SubmitProps from '../../common/model/args/SubmitProps.js';
 //import NotImplementedException from '../model/exception/NotImplementedException.js';
 import { KubeOpReturn, KubeOpReturnStatus } from '../../common/model/KubeOpReturn.js';
 import UnhandledValueException from '../model/exception/UnhandledValueException.js';
-import type ImageInfo from '../../common/model/ImageInfo.js';
+import type Artifact from '../../common/model/Artifact.js';
 import KubeException from '../model/exception/KubeException.js';
 import type DetailsProps from '../../common/model/args/DetailsProps.js';
 import type LogProps from '../../common/model/args/LogProps.js';
@@ -39,6 +39,7 @@ import type JobErrors from '../model/JobErrors.js';
 import type { ClusterWarning, ContainerError } from '../model/JobErrors.js';
 import type HarborManager from './HarborManager.js';
 import type { ContainerDetails } from '../../common/model/JobDetails.js';
+import type ImageRepo from '../../common/model/ImageRepo.js';
 
 
 export default class KubeManager {
@@ -439,10 +440,11 @@ export default class KubeManager {
         let prefix = "";
         const [imgNm, imgTag] = imageNmTag.split(":");
         for (const hp of this.settings.harborProjects) {
-            const projImgs: KubeOpReturn<ImageInfo[]>  = await hm.getHarborImages(hp);
+            const projImgs: KubeOpReturn<ImageRepo[]>  = await hm.getHarborImages(hp);
             if (projImgs.isOk() && projImgs.payload) {
-                const f:ImageInfo | undefined = projImgs.payload.find((id: ImageInfo) => 
-                    id.name === imgNm && id.tags.find(t => t === imgTag) !== undefined);
+                const f:ImageRepo | undefined = projImgs.payload.find((id: ImageRepo) => 
+                    id.name === imgNm && id.artifacts.flatMap((a: Artifact) => a.tags)
+                        .find(t => t === imgTag) !== undefined);
                 if (f) {
                     const u = new URL(hp.baseUrl);
                     prefix = `${u.hostname}${u.port !== "" ? ":" + u.port : ""}/${hp.name}/`;
