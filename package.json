@@ -7,7 +7,8 @@
   },
   "bin": {
     "jobman": "./bin/jobman",
-    "jobman-webservice": "./bin/jobman-webservice"
+    "jobman-webservice": "./bin/jobman-webservice",
+    "jobman-k8s-logger": "./bin/jobman-k8s-logger"
   },
   "description": "The Kubernetes job manager",
   "dependencies": {
