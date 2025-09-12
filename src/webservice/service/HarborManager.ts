@@ -104,9 +104,21 @@ export default class HarborManager {
                         const arts: HarborRespositoryArtifact[] = await rArtifacts.json() as HarborRespositoryArtifact[];
                         
                         for (const art of arts ) {
+                            // const rCallManifest: Response = await this.fetchCustom(`${hp.baseUrl}/api/v2.0/${hp.name}/${repo.name}/manifests/art.digest`, 
+                            //     {
+                            //         agent,
+                            //         ...hp.token && {headers: [["authorization", `Basic ${hp.token}`]]}
+                            //     });
+                            // if (rCallManifest.ok) {
+                            //     const digest = await rCallManifest.json() as HarborRepository[];
+                            //     TODO: finish
+                            // }
                             artifacts.push({
+                                entrypoint: [],
+                                cmd: [],
                                 digest: art.digest,
                                 tags: art.tags !== null ? art.tags.map(t => t.name) : []
+                                
                             })
                             // console.log(art);
                             // if (art.tags !== null) {

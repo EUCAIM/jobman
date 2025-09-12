@@ -1,10 +1,10 @@
-import { KubeConfig, BatchV1Api, V1Job, V1JobStatus, V1DeleteOptions, Watch, 
+import { KubeConfig, CustomObjectsApi, BatchV1Api, V1Job, V1JobStatus, V1DeleteOptions, Watch, 
         CoreV1Api, V1PodList, HttpError, V1Pod, V1ConfigMap, 
         //V1Volume, V1VolumeMount, 
         V1PodSecurityContext, V1ResourceRequirements, 
         V1EnvVar,
-        V1ContainerStatus,
-        V1Container} from '@kubernetes/client-node';
+        V1Container,
+        V1VolumeMount} from '@kubernetes/client-node';
 import { v4 as uuidv4}  from "uuid";
 import log from "loglevel";
 import fs from "node:fs";
@@ -38,8 +38,10 @@ import type JobSubmiSuccess from '../../common/model/JobSubmitSuccess.js';
 import type JobErrors from '../model/JobErrors.js';
 import type { ClusterWarning, ContainerError } from '../model/JobErrors.js';
 import type HarborManager from './HarborManager.js';
-import type { ContainerDetails } from '../../common/model/JobDetails.js';
 import type ImageRepo from '../../common/model/ImageRepo.js';
+import type ResourceConsumptionProps from '../../common/model/args/ResourceConsumptionProps.js';
+import type ImageReference from '../../common/model/ImageReference.js';
+import type { JobDetailsEnv, JobDetailsResourcesUsage } from '../../common/model/JobDetails.js';
 
 
 export default class KubeManager {
@@ -49,10 +51,17 @@ export default class KubeManager {
     public static CONTAINER_SIDECAR_LOGS_NAME = "container-sidecar-logs";
     public static SERVICE_ACCOUNT_CREDENTIALS_VOL = "sacredentials";
 
+    public static RESOURCE_USAGE_FINISHED: JobDetailsResourcesUsage = {
+                        cpu: "0mi",
+                        memory: "0b"
+
+    }
+
     protected logger: LoggerService;
     protected clusterConfig: KubeConfig;
     protected k8sApi: BatchV1Api;
     protected k8sCoreApi: CoreV1Api;
+    protected metricsClient: CustomObjectsApi;
     protected settings: SettingsWebService;
     protected watch: Watch;
 
@@ -62,6 +71,7 @@ export default class KubeManager {
         this.clusterConfig = this.loadKubeConfig(settings.kubeConfig);
         this.k8sApi = this.clusterConfig.makeApiClient(BatchV1Api);
         this.k8sCoreApi = this.clusterConfig.makeApiClient(CoreV1Api);
+        this.metricsClient = this.clusterConfig.makeApiClient(CustomObjectsApi);
         this.watch = new Watch(this.clusterConfig);
     }
 
@@ -155,50 +165,50 @@ export default class KubeManager {
             //     }
             // }
             const priorityClassName: string | undefined | null = this.settings.job.priorityClassName;
-            const volumes = [
-                {
-                name: KubeManager.SERVICE_ACCOUNT_CREDENTIALS_VOL,
-                projected: {
-                    sources: [
-                    {
-                        secret: {
-                            name: this.settings.job.serviceAccountTokenSecret,
-                            items:[
-                                {
-                                    key: "token",
-                                    path: "token"
-                                }
-                            ]
-                        }
-                    },
-                    {
-                        downwardAPI: {
-                            items:[
-                                {
-                                    path: "namespace",
-                                    fieldRef: {
-                                        fieldPath: "metadata.namespace"
-                                    }
-                                }
-                            ]
-                        }
-                    },
-                    {
-                        configMap: {
-                            name: this.settings.job.kubeRootCASecret,
-                            items: [
-                                {
-                                    key: "ca.crt",
-                                    path: "ca.crt"
-                                }
-                            ]
-                        }
+            // const volumes = [
+            //     {
+            //     name: KubeManager.SERVICE_ACCOUNT_CREDENTIALS_VOL,
+            //     projected: {
+            //         sources: [
+            //         {
+            //             secret: {
+            //                 name: this.settings.job.serviceAccountTokenSecret,
+            //                 items:[
+            //                     {
+            //                         key: "token",
+            //                         path: "token"
+            //                     }
+            //                 ]
+            //             }
+            //         },
+            //         {
+            //             downwardAPI: {
+            //                 items:[
+            //                     {
+            //                         path: "namespace",
+            //                         fieldRef: {
+            //                             fieldPath: "metadata.namespace"
+            //                         }
+            //                     }
+            //                 ]
+            //             }
+            //         },
+            //         {
+            //             configMap: {
+            //                 name: this.settings.job.kubeRootCASecret,
+            //                 items: [
+            //                     {
+            //                         key: "ca.crt",
+            //                         path: "ca.crt"
+            //                     }
+            //                 ]
+            //             }
                         
-                    }
-                ]
-                }
-                }
-            ]
+            //         }
+            //     ]
+            //     }
+            //     }
+            // ]
 
             job.spec = {
                 backoffLimit: 0,
@@ -207,17 +217,19 @@ export default class KubeManager {
                         name: jn
                     },
                     spec: {
-                        serviceAccount: this.settings.job.serviceAccount,
+                        //serviceAccount: this.settings.job.serviceAccount,
                         automountServiceAccountToken: false,
                         ...securityContext && {securityContext: {...new V1PodSecurityContext(), ...securityContext} },
                         ...priorityClassName && {priorityClassName},
-                        ...volumes && {volumes},
+                        //...volumes && {volumes},
                         containers: await this.getSubmitContainers(props, kr, hm),
                         restartPolicy: "Never"
                     }
                 }
 
             }
+
+            // console.log( JSON.stringify(job, null, 2));
 
             if (props.dryRun) {
                 return new KubeOpReturn(KubeOpReturnStatus.Success, "\n" + JSON.stringify(job, null, 2), "\n" + JSON.stringify(job, null, 2));
@@ -275,13 +287,6 @@ export default class KubeManager {
                     const pods = await this.k8sCoreApi.listNamespacedPod(this.getNamespace(), undefined, undefined, undefined, undefined, `job-name=${jn}`);
                     const pod = pods.body.items[0]; 
                     if (pod) {
-                        const containers: ContainerDetails[] = [];
-                        pod.status?.containerStatuses?.forEach((cs: V1ContainerStatus) => {
-                            containers.push({
-                                name: cs.name, 
-                                exitCode: cs.state?.terminated?.exitCode !==  undefined ? cs.state?.terminated?.exitCode : null
-                            });
-                        })
                         let executionDuration: number | null = null;
                         if (pod.status?.containerStatuses?.[0]?.state?.terminated?.startedAt && 
                             pod.status?.containerStatuses?.[0]?.state?.terminated?.finishedAt) {
@@ -291,9 +296,28 @@ export default class KubeManager {
                         const errors: string[] = [];
                         const jobErrors: JobErrors = await this.getJobErrors(userId, props.jobName);
                         if (jobErrors.containerError) {
-                            errors.push(`Container error with exit code '${jobErrors.containerError.exitCode}': ${jobErrors.containerError.reason} - ${jobErrors.containerError.message}`);
+                            const msg = jobErrors.containerError.message ? ` Message: '${jobErrors.containerError.message}'.` : "";
+                            const reason = jobErrors.containerError.reason ? ` Reason: '${jobErrors.containerError.reason}'.` : "";
+                            errors.push(`Container error with exit code '${jobErrors.containerError.exitCode}'.${reason}${msg}`);
                         }
-                        errors.push(...jobErrors.clusterWarnings.map(cw => `Cluster error: ${cw.reason} - ${cw.message}`))
+                        errors.push(...jobErrors.clusterWarnings.map(cw => {
+                            const msg = cw.message ? ` Message: '${cw.message}'.` : "";
+                            const reason = cw.reason ? ` Reason: '${cw.reason}'.` : "";
+                            return `Cluster error.${reason}${msg}`;
+                        }));
+                        const env: JobDetailsEnv[] | undefined = pod.spec?.containers[0]?.env
+                                            ?.filter((e: V1EnvVar) => e.valueFrom === undefined)
+                                            ?.map((e: V1EnvVar) => { return {
+                                                name: e.name,
+                                                value: e.value !== undefined ? e.value : null
+                                            }});
+                        const finishedAt = pod.status?.containerStatuses?.[0]?.state?.terminated?.finishedAt?.toISOString() ?? null;
+                        let usage: JobDetailsResourcesUsage | null = null;
+                        if (finishedAt) {
+                            usage = KubeManager.RESOURCE_USAGE_FINISHED;
+                        } else {
+                            usage = pod.metadata?.name ? await this.getResourcesUsage(jn, pod.metadata?.name) : null;
+                        }
                         const jd: JobDetails = { name: props.jobName,//r.metadata?.name ?? "<Unknown>",
                             uid: r.metadata?.uid ?? null,
                             status: await this.getStatusJob(r.metadata?.name ?? "", r.status, userId),
@@ -303,15 +327,37 @@ export default class KubeManager {
                             exitCode: pod.status?.containerStatuses?.[0]?.state?.terminated?.exitCode ?? null,
                             startedAt: pod.status?.containerStatuses?.[0]?.state?.running?.startedAt?.toISOString() 
                                 ?? pod.status?.containerStatuses?.[0]?.state?.terminated?.startedAt?.toISOString() ?? null,
-                            finishedAt: pod.status?.containerStatuses?.[0]?.state?.terminated?.finishedAt?.toISOString() ?? null,
+                            finishedAt,
                             executionDuration,
                             errors,
-                            pods: [
-                                {
-                                    name: pod.metadata?.name ?? null,
-                                    containers
-                                }
-                            ]
+                            user: r.metadata?.annotations?.[this.settings.job.userNameAnnotation] ?? null,
+                            image: pod.spec?.containers[0]?.image ?? null,
+                            privileged: pod.spec?.containers[0]?.securityContext?.privileged !== undefined 
+                                            ? pod.spec?.containers[0]?.securityContext?.privileged : null,
+                            mounts: pod.spec?.containers[0]?.volumeMounts
+                                        ?.map((v: V1VolumeMount) => { return {
+                                                source: v.name,
+                                                mountPath: v.mountPath,
+                                                readOnly: v.readOnly !== undefined ? v.readOnly : null
+                                            };}) ?? [],
+                            env: env !== undefined ? env : null,
+                            command: pod.spec?.containers[0]?.command !== undefined ? pod.spec?.containers[0]?.command : null,
+                            args: pod.spec?.containers[0]?.args !== undefined ? pod.spec?.containers[0]?.args : null,
+                            host: {
+                                serverName: this.settings.defaultKubeURL ? this.settings.defaultKubeURL : (this.clusterConfig.getCurrentCluster()?.server ?? null),
+                                uid: pod.spec?.containers[0]?.securityContext?.runAsUser === undefined ? 
+                                    (pod.spec?.securityContext?.runAsUser === undefined ? null 
+                                        : pod.spec?.securityContext?.runAsUser) 
+                                    : pod.spec?.containers[0]?.securityContext?.runAsUser,
+                                gid:  pod.spec?.containers[0]?.securityContext?.runAsGroup === undefined ? 
+                                    (pod.spec?.securityContext?.runAsGroup === undefined ? null 
+                                        : pod.spec?.securityContext?.runAsGroup) 
+                                    : pod.spec?.containers[0]?.securityContext?.runAsGroup,
+                                user: null
+                            },
+                            resources: {
+                                usage
+                            }
                         }
                         return new KubeOpReturn(KubeOpReturnStatus.Success, undefined, jd);
                     } else {
@@ -426,36 +472,97 @@ export default class KubeManager {
 
     }
 
-    protected async getSubmitContainers(props: SubmitProps, kr: KubeResourcesFlavor, hm: HarborManager): Promise<V1Container[]> {
-        const cmdArgs: string[] | undefined = props.commandArgs ? (props.commandArgs.length === 0 ? undefined : props.commandArgs) : props.commandArgs;
-        //const command: string[] | undefined = props.command ? cmdArgs : undefined;
-        const args: string[] | undefined = //props.command ? undefined : 
-            cmdArgs;
-        const env: Array<V1EnvVar> | undefined = props.env?.map(e => Object.assign(new V1EnvVar(),  e));
-        const imageNmTag: string | undefined = props.image ?? this.settings.job.defaultImage;
-        if (!imageNmTag || imageNmTag.length === 0) {
-            throw new ParameterException(
-                `Please specify an image name and a tag either using the command line parameters or defining a default value in application's settings`); 
-        }
-        let prefix = "";
-        const [imgNm, imgTag] = imageNmTag.split(":");
-        for (const hp of this.settings.harborProjects) {
-            const projImgs: KubeOpReturn<ImageRepo[]>  = await hm.getHarborImages(hp);
-            if (projImgs.isOk() && projImgs.payload) {
-                const f:ImageRepo | undefined = projImgs.payload.find((id: ImageRepo) => 
-                    id.name === imgNm && id.artifacts.flatMap((a: Artifact) => a.tags)
-                        .find(t => t === imgTag) !== undefined);
-                if (f) {
-                    const u = new URL(hp.baseUrl);
-                    prefix = `${u.hostname}${u.port !== "" ? ":" + u.port : ""}/${hp.name}/`;
-                    break;
+    public async resourceConsumption(props: ResourceConsumptionProps, userId: string, ) {
+
+    }
+
+    protected async getResourcesUsage(internalJobName: string, pod: string): Promise<JobDetailsResourcesUsage | null> {
+        try {
+            const res = await this.metricsClient.getNamespacedCustomObject(
+                'metrics.k8s.io', 
+                'v1beta1',        
+                this.getNamespace(),
+                'pods',          
+                pod
+            );
+            const cn = KubeManager.CONTAINER_MAIN_NAME;
+            const podMetrics = res.body as any;
+            for (const container of podMetrics.containers) {
+                if (container.name === cn) {
+                    return {
+                        cpu: container.usage.cpu,
+                        memory: container.usage.memory
+                    }
+                }
+            }
+            console.error(`Container named '${cn}' not found in pod '${pod}'`);
+        } catch(e: any) {
+            if (e instanceof HttpError && e.body.code === 404) {
+                const pods = await this.k8sCoreApi.listNamespacedPod(this.getNamespace(), 
+                    undefined, undefined, undefined, undefined, `job-name=${internalJobName}`);
+                const pod = pods.body.items[0]; 
+                if (pod?.status?.containerStatuses?.[0]?.state?.terminated?.finishedAt) {
+                    return KubeManager.RESOURCE_USAGE_FINISHED;
+                } else {
+                    console.error(e.body.message);
                 }
             } else {
-                console.error(projImgs.message);
-            }    
+                const k = this.handleKubeOpsError(e);
+                console.error(k.message)
+            }
         }
-        const image = prefix + imageNmTag;
+        return null;
+    }
+
+    protected async getSubmitContainers(props: SubmitProps, kr: KubeResourcesFlavor, hm: HarborManager): Promise<V1Container[]> {
+
+
+        const env: Array<V1EnvVar> | undefined = props.env?.map(e => Object.assign(new V1EnvVar(),  e));
+        // if (!props.image) {
+        //     throw new ParameterException(
+        //         `Please specify an image name and a tag either using the command line parameters or defining a default value in application's settings`); 
+        // }
+        // let imgEntryPoint = null;
+        // let imgCmd = null;
+        let img: ImageReference = props.image ? Util.parseImageReference(props.image) : this.settings.job.defaultImageReference;
+        if (!img.tag) {
+            img.tag = this.settings.job.defaultImageReference.tag;
+        }
+        if (!img.registry) {
+            let registry = null;
+            let organization = null;
+            for (const hp of this.settings.harborProjects) {
+                const projImgs: KubeOpReturn<ImageRepo[]>  = await hm.getHarborImages(hp);
+                if (projImgs.isOk() && projImgs.payload) {
+                    const f:ImageRepo | undefined = projImgs.payload.find((id: ImageRepo) => 
+                        id.name === img.registry && id.artifacts.flatMap((a: Artifact) => a.tags)
+                            .find(t => t === img.tag) !== undefined);
+                    if (f) {
+                        const u = new URL(hp.baseUrl);
+                        registry = `${u.hostname}${u.port !== "" ? ":" + u.port : ""}`;
+                        organization = hp.name;
+                        break;
+                    }
+                } else {
+                    console.error(projImgs.message);
+                }    
+            }
+            if (!registry) {
+                img.registry = this.settings.job.defaultImageReference.registry;
+            } else {
+                img.registry = registry;
+            }
+            if (!organization) {
+                img.organization = this.settings.job.defaultImageReference.organization;
+            } else {
+                img.organization = organization;
+            }
+        }
+
+        const image = `${img.registry}/${img.organization}/${img.name}${img.digest ? `@${img.digest}` : `:${img.tag}`}`;
         console.log(`Using image '${image}'`);
+        const args: string[] | undefined = props.commandArgs ? (props.commandArgs.length === 0 ? undefined : props.commandArgs) : props.commandArgs;
+        //const command: string[] | undefined = [];//props.command ? cmdArgs : undefined;
         const containers: V1Container[] = [
             {
                 name: KubeManager.CONTAINER_MAIN_NAME,

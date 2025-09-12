@@ -55,5 +55,6 @@
         "clientSecret": ""
     },
     "port": 9000,
-    "path": "/"
+    "path": "/",
+    "defaultKubeURL": ""
 }
