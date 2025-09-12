@@ -1,6 +1,6 @@
 {
   "name": "jobman",
-  "version": "2.1.1-BETA",
+  "version": "2.1.2-BETA",
   "main": "./dist/index.ts",
   "exports": {
     "default": "./src/"
@@ -37,7 +37,7 @@
     "start-webservice": "ts-node-esm src/webservice/index.ts",
     "prod-webservice": "node dist/webservice/index.js",
     "prod-k8s-logger": "node dist/k8s-logger/index.js",
-    "dev-webservice": "nodemon --exec 'npm start-webservice'",
+    "dev-webservice": "nodemon --watch src --ext ts,js,json --exec \"node --loader ts-node/esm src/webservice/index.ts\" --",
     "test": "NODE_OPTIONS=--experimental-vm-modules npx jest",
     "build": "node_modules/.bin/tsc && cp usage.md examples.md ./dist/"
   },
