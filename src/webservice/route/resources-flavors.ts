@@ -10,6 +10,28 @@ import type KubeResourcesFlavor from '../../common/model/KubeResourcesFlavor.js'
 
 const resourcesFlavorsRouter = function(oidcAuth: OidcAuth, km: KubeManager) {
     let routerObj = express.Router();
+    /**
+    * @openapi
+    *  /resources-flavors/:
+    *    get:
+    *      tags:
+    *        - resources-flavors
+    *      summary: Get a list of all predefined resources flavors available 
+    *      operationId: getResourcesFlavors
+    *      responses:
+    *        '200':
+    *          description: Successful operation
+    *          content:
+    *            application/json:
+    *              schema:
+    *                $ref: '#/components/schemas/Page-KubeResourcesFlavor'
+    *        '401':
+    *          description: Unauthorized
+    *          content:
+    *            application/json:
+    *              schema:
+    *                $ref: '#/components/schemas/ErrorResponse'
+     */
     routerObj.get('/', async (req: Request, res: Response, next: NextFunction) => {
         commonRequest<Page<KubeResourcesFlavor> | null>(req, res, next, oidcAuth, km.resourcesFlavors.bind(km));
     });

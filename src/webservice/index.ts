@@ -8,6 +8,8 @@ import type { ErrorRequestHandler } from "express";
 //import 'dotenv/config';
 //import fs from "node:fs";
 import { parseArgs } from 'node:util';
+import swaggerJsdoc from 'swagger-jsdoc';
+import swaggerUi from 'swagger-ui-express';
 
 
 import { exit } from 'node:process';
@@ -21,6 +23,7 @@ import OidcAuth from './service/OidcAuth.js';
 import KubeManager from './service/KubeManager.js';
 import resourcesFlavorsRouter from './route/resources-flavors.js';
 import HarborManager from './service/HarborManager.js';
+import swaggerOptions from './swagger.js';
 
 
 //console.log(process.argv);
@@ -40,7 +43,22 @@ const hm = new HarborManager(appConf);
 // /const appConfig = AppConfig.get();
 console.log(`Jobman web service version '${process.env["npm_package_version"]}'`);
 const app: Express = express();
+const swaggerSpec = swaggerJsdoc(swaggerOptions);
 
+app.get('/swagger.json', (_req, res) => {
+  res.setHeader('Content-Type', 'application/json');
+  res.send(swaggerSpec);
+});
+app.use(
+  '/api-docs',
+  swaggerUi.serve,
+  swaggerUi.setup(swaggerSpec, {
+    explorer: true,
+    swaggerOptions: {
+      persistAuthorization: true
+    }
+  })
+);
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 //app.use(express.static(path.join(__dirname, 'public')));

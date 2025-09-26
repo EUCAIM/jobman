@@ -10,6 +10,8 @@ import type EJobStatus from "./EJobStatus.js";
 *           - name
 *           - status
 *           - createdAt
+*           - position
+*           - flavor
 *       properties:
 *         name: 
 *           type: string

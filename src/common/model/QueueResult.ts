@@ -1,4 +1,29 @@
-
+/**
+ * @openapi
+* components:
+*   schemas:
+*     QueueResult:
+*       type: object
+*       required:
+*           - id
+*           - totalPending
+*           - totalRunning
+*       properties:
+*         id: 
+*           type: string
+*         flavor: 
+*           type: string
+*         cpu:
+*           type: string
+*         memory:
+*           type: string
+*         gpu:
+*           type: number
+*         totalPending:
+*           type: number
+*         totalRunning:
+*           type: number
+ */
 export default class QueueResult {
     public id: string;
     public flavor: string | undefined;
