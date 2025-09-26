@@ -262,14 +262,14 @@ export default class KubeManager {
                         res.push({ name: this.getJobName(userId, jn),
                             uid: e.metadata?.uid,
                             status: await this.getStatusJob(jn, e.status, userId),
-                            dateLaunched: e.metadata?.creationTimestamp?.getTime() ?? null,
+                            createdAt: e.metadata?.creationTimestamp?.getTime() ? new Date(e.metadata?.creationTimestamp?.getTime()).toISOString() : null,
                             position: 0,//jobsQueue?.data?.["jobs"]?.find(j => j.name === jn && j.user === this.getUsername())?.
                             flavor: e.metadata?.annotations?.["chaimeleon.eu/jobResourcesFlavor"] ?? "-"
                         });
                     }
                 }
-                res.sort(function(a,b){return (b.dateLaunched ?? 0) 
-                        - (a.dateLaunched ?? 0)});
+                res.sort(function(a,b){return (b.createdAt ? new Date(b.createdAt).getTime() : 0) 
+                        - (a.createdAt ? new Date(a.createdAt).getTime() : 0)});
                 return new KubeOpReturn(KubeOpReturnStatus.Success, r.message, { data: res, size: res.length, total: res.length, skip: 0 });
             } else {
                 return new KubeOpReturn(KubeOpReturnStatus.Success, "Empty jobs list", { data: [], size: 0, total: 0, skip: 0 });

@@ -197,10 +197,10 @@ export default class DisplayService {
                         ],
                         computedColumns:[
                             {
-                                name: "Launch Date",
+                                name: "Creation Date",
                                 maxLen: Math.floor(totalNoColsAvailable * 0.30),
-                                function: (row: JobInfo) => row.dateLaunched ? new Intl.DateTimeFormat('en-GB', this.options)
-                                                .format(row.dateLaunched) : "-",
+                                function: (row: JobInfo) => row.createdAt ? new Intl.DateTimeFormat('en-GB', this.options)
+                                                .format(new Date(row.createdAt)) : "-",
                                 alignment: 'center'
                             }
                         ]
