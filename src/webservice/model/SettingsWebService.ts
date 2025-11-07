@@ -75,6 +75,8 @@ export interface OidcSettings {
     realm: string;
     clientId: string;
     clientSecret: string;
+    audiences: string[];
+    resourceAccessRoles: string[];
 }
 
 export interface K8sLogger {

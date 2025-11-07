@@ -52,7 +52,13 @@
         "url": "",
         "realm": "CHAIMELEON",
         "clientId": "jobman-service",
-        "clientSecret": ""
+        "clientSecret": "",
+        "audiences": [
+            "jobman-service"
+        ],
+        "resourceAccessRoles": [
+            "manage-own-jobs"
+        ]
     },
     "port": 9000,
     "path": "/",
