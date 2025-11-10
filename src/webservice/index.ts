@@ -43,6 +43,12 @@ const hm = new HarborManager(appConf);
 // /const appConfig = AppConfig.get();
 console.log(`Jobman web service version '${process.env["npm_package_version"]}'`);
 const app: Express = express();
+
+
+const apiPath =  appConf.path.prefix + appConf.path.api;
+swaggerOptions.definition?.["servers"].push(
+     { url: apiPath, description: 'This server' }
+)
 const swaggerSpec = swaggerJsdoc(swaggerOptions);
 
 app.get('/swagger.json', (_req, res) => {
@@ -50,7 +56,7 @@ app.get('/swagger.json', (_req, res) => {
   res.send(swaggerSpec);
 });
 app.use(
-  '/api-docs',
+  `${appConf.path.prefix}/api-docs/`,
   swaggerUi.serve,
   swaggerUi.setup(swaggerSpec, {
     explorer: true,
@@ -66,10 +72,10 @@ app.use(express.urlencoded({ extended: false }));
 //app.use(BodyParser.json({ limit: appConfig.resultPostSize }));
 //app.use(BodyParser.urlencoded({ extended: true }));
 //app.use(upload.array());
-app.use(appConf.path + "/jobs", jobsRouter(oidcAuth, km, hm));
-app.use(appConf.path + "/images", imagesRouter(oidcAuth, hm));
-app.use(appConf.path + "/queue", queueRouter(oidcAuth, km));
-app.use(appConf.path + "/resources-flavors", resourcesFlavorsRouter(oidcAuth, km));
+app.use(apiPath + "/jobs", jobsRouter(oidcAuth, km, hm));
+app.use(apiPath + "/images", imagesRouter(oidcAuth, hm));
+app.use(apiPath + "/queue", queueRouter(oidcAuth, km));
+app.use(apiPath + "/resources-flavors", resourcesFlavorsRouter(oidcAuth, km));
 // 404 handler and pass to error handler
 app.use((req: Request, res: Response, next: NextFunction) => {
     next(HttpErrors(404, new BaseError("Not found", "Path " + req.path + " not found on the server", 404)));

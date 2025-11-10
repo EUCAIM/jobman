@@ -7,7 +7,7 @@ import type ImageDetailsProps from "../../common/model/args/ImageDetailsProps.js
 import { KubeOpReturnStatus, KubeOpReturn } from "../../common/model/KubeOpReturn.js";
 import type { SettingsWebService } from "../model/SettingsWebService.js";
 import type HarborRepository from "../model/HarborRepository.js";
-import type HarborProject from "../model/SettingsWebService.js";
+import type { HarborProject } from "../model/SettingsWebService.js";
 import type Artifact from "../../common/model/Artifact.js";
 import type Page from "../../common/model/Page.js";
 import type { HarborRespositoryArtifact } from "../model/HarborRespositoryArtifact.js";
@@ -92,7 +92,7 @@ export default class HarborManager {
                     const name: string = repo.name.substring(repo.name.indexOf("/") + 1, repo.name.length);
                     const description: string = repo.description;
                     const artifacts: Artifact[] = []
-                    result.push({name, artifacts, description})
+                    result.push({name, repository: repo.name, artifacts, description})
                     
                     const artsUrl = `${reposUrl}/${name}/artifacts`;
                     const rArtifacts: Response = await this.fetchCustom(`${artsUrl}?page_size=${repo.artifact_count}`, 

@@ -85,10 +85,15 @@ export interface K8sLogger {
     sleep: number;
 }
 
-export default interface HarborProject {
+export interface HarborProject {
     baseUrl: string;
     name: string;
     token?: string | null;
+}
+
+export interface PathInfo {
+    prefix: string;
+    api: string;
 }
 
 
@@ -100,6 +105,6 @@ export interface SettingsWebService {
     job: Job;
     oidc: OidcSettings;
     port: string;
-    path: string;
+    path: PathInfo;
     defaultKubeURL?: string | null | undefined;
 }

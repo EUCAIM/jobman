@@ -25,7 +25,7 @@ const swaggerOptions: Options = {
       }
     },
     servers: [
-      { url: '/api/v1', description: 'This server' }
+    //   { url: '/api/v1', description: 'This server' }
     ]
   },
   apis: ['./src/webservice/route/*.ts', './src/webservice/model/*.ts', './src/common/model/*.ts', './src/common/model/args/*.ts'] // adjust paths to your JSDoc-annotated files
