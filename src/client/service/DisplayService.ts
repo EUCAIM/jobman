@@ -5,7 +5,6 @@ import RestService from "./RestService.js";
 import type { SettingsClient } from "../model/SettingsClient.js";
 import QueueResult from "../../common/model/QueueResult.js";
 import { KubeOpReturn, KubeOpReturnStatus } from "../../common/model/KubeOpReturn.js";
-import type Artifact from "../../common/model/Artifact.js";
 import type ImageDetailsProps from "../../common/model/args/ImageDetailsProps.js";
 import type SubmitProps from "../../common/model/args/SubmitProps.js";
 import type DetailsProps from "../../common/model/args/DetailsProps.js";
@@ -16,6 +15,7 @@ import JobInfo from "../../common/model/JobInfo.js";
 import TerminalRenderer from "marked-terminal";
 import type QueueResultDisplay from "../../common/model/QueueResultDisplay.js";
 import type Page from "../../common/model/Page.js";
+import type ImageRepo from "../../common/model/ImageRepo.js";
 
 type SimpleMsgCallbFunction = (...args: any[]) => void;
 
@@ -113,7 +113,7 @@ export default class DisplayService {
                             {
                                 name: "Tags List",
                                 maxLen: Math.floor(totalNoColsAvailable * 0.75),
-                                function: (row: Artifact) => row.tags.join("  "), 
+                                function: (row: ImageRepo) => row.artifacts.map(a => a.tags.join(" ")).join("  "), 
                                 alignment: 'left'
                             }
                         ]

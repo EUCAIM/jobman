@@ -2,9 +2,9 @@ import express from "express";
 import type { Request, Response, NextFunction } from "express";
 import type OidcAuth from "../service/OidcAuth.js";
 import commonRequest from "./common.js";
-import type Artifact from "../../common/model/Artifact.js";
 import type Page from "../../common/model/Page.js";
 import type HarborManager from "../service/HarborManager.js";
+import type ImageRepo from "../../common/model/ImageRepo.js";
 
 const imagesRouter = function(oidcAuth: OidcAuth, hm: HarborManager) {
     let routerObj = express.Router();
@@ -26,7 +26,7 @@ const imagesRouter = function(oidcAuth: OidcAuth, hm: HarborManager) {
     *          content:
     *            application/json:
     *              schema:
-    *                $ref: '#/components/schemas/Page-ImageDetails'
+    *                $ref: '#/components/schemas/Page-ImageRepo'
     *        '401':
     *          description: Unauthorized
     *          content:
@@ -35,7 +35,7 @@ const imagesRouter = function(oidcAuth: OidcAuth, hm: HarborManager) {
     *                $ref: '#/components/schemas/ErrorResponse'
      */
     routerObj.get('/', async (req: Request, res: Response, next: NextFunction) => {
-      commonRequest<Page<Artifact> | null>(req, res, next, oidcAuth, hm.images.bind(hm));
+      commonRequest<Page<ImageRepo> | null>(req, res, next, oidcAuth, hm.images.bind(hm));
     });
   
     /**

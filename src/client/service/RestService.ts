@@ -11,10 +11,10 @@ import type DeleteProps from "../../common/model/args/DeleteProps.js";
 import type JobDetails from "../../common/model/JobDetails.js";
 import type JobInfo from "../../common/model/JobInfo.js";
 import type Page from "../../common/model/Page.js";
-import type Artifact from "../../common/model/Artifact.js";
 import type KubeResourcesFlavor from "../../common/model/KubeResourcesFlavor.js";
 import type JobLog from "../../common/model/JobLog.js";
 import type JobSubmiSuccess from "../../common/model/JobSubmitSuccess.js";
+import type ImageRepo from "../../common/model/ImageRepo.js";
 
 export default class RestService {
 
@@ -43,8 +43,8 @@ export default class RestService {
         return this.commonCall<string | null>(`/images/${props.image}/description`, "GET");
     }
 
-    public images(): Promise<KubeOpReturn<Page<Artifact> | null>> {
-        return this.commonCall<Page<Artifact>>("/images/", "GET");
+    public images(): Promise<KubeOpReturn<Page<ImageRepo> | null>> {
+        return this.commonCall<Page<ImageRepo>>("/images/", "GET");
     }
 
     public details(props: DetailsProps): Promise<KubeOpReturn<JobDetails | null>> {
@@ -86,9 +86,9 @@ export default class RestService {
                         try {
                             resp = JSON.parse(txt) as T;
                         } catch (e) {
-                            console.error(resp);
+                            console.debug("unable to convert response to object");                            
+                            resp = txt;
                         }
-                        resp = txt;
                         
                     }                   
                     
