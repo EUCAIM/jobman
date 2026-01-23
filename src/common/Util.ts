@@ -49,7 +49,7 @@ export default class Util {
     public static parseImageReference(ref: string): ImageReference {
         let registry: string | undefined;
         let name: string = "";
-        let organization: string | undefined;
+        let namespace: string | undefined;
         let tag: string | undefined;
         let digest: string | undefined;
 
@@ -73,25 +73,24 @@ export default class Util {
             name = `${parts[0]}`;
         } else if (
             parts[0]?.includes('.') || // domain name
-            parts[0]?.includes(':') || // port
-            parts[0] === 'localhost'
+            parts[0]?.includes(':')
         ) {
             registry = parts[0];
             if (parts.length === 2) {
                 name = parts[1] ?? "";
             } else if (parts.length === 3) {
-                organization = parts[1];
+                namespace = parts[1];
                 name = parts[2] ?? "";
             } else {
                 throw new Error(`Can't parse reference '${ref}', too many backslashes.`);
             }
         } else {
             // e.g., "myorg/myimage"
-            organization = parts[0];
+            namespace = parts[0];
             name = parts[1] ?? "";
         }
 
-        return { registry, organization, name, tag, digest };
+        return { registry, namespace, name, tag, digest };
     }
 
     // public static async getEntrypointAndCmd(registry: string, repo: string, tag: string) {
