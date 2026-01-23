@@ -163,7 +163,6 @@ roleRef:
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  creationTimestamp: null
   name: webservice-config
   namespace: jobman-service
 data:
