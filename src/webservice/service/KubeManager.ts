@@ -15,7 +15,6 @@ import type SubmitProps from '../../common/model/args/SubmitProps.js';
 //import NotImplementedException from '../model/exception/NotImplementedException.js';
 import { KubeOpReturn, KubeOpReturnStatus } from '../../common/model/KubeOpReturn.js';
 import UnhandledValueException from '../model/exception/UnhandledValueException.js';
-import type Artifact from '../../common/model/Artifact.js';
 import KubeException from '../model/exception/KubeException.js';
 import type DetailsProps from '../../common/model/args/DetailsProps.js';
 import type LogProps from '../../common/model/args/LogProps.js';
@@ -38,9 +37,7 @@ import type JobSubmiSuccess from '../../common/model/JobSubmitSuccess.js';
 import type JobErrors from '../model/JobErrors.js';
 import type { ClusterWarning, ContainerError } from '../model/JobErrors.js';
 import type HarborManager from './HarborManager.js';
-import type ImageRepo from '../../common/model/ImageRepo.js';
 import type ResourceConsumptionProps from '../../common/model/args/ResourceConsumptionProps.js';
-import type ImageReference from '../../common/model/ImageReference.js';
 import type { JobDetailsEnv, JobDetailsResourcesUsage } from '../../common/model/JobDetails.js';
 
 
@@ -245,6 +242,7 @@ export default class KubeManager {
             //}
         
         } catch (e) {
+            console.error(e);
             return this.handleKubeOpsError(e);
         }
     }
@@ -514,53 +512,13 @@ export default class KubeManager {
         return null;
     }
 
-    protected async getSubmitContainers(props: SubmitProps, kr: KubeResourcesFlavor, hm: HarborManager): Promise<V1Container[]> {
-
-
+    protected async getSubmitContainers(props: SubmitProps, kr: KubeResourcesFlavor, 
+            hm: HarborManager): Promise<V1Container[]> {
         const env: Array<V1EnvVar> | undefined = props.env?.map(e => Object.assign(new V1EnvVar(),  e));
-        // if (!props.image) {
-        //     throw new ParameterException(
-        //         `Please specify an image name and a tag either using the command line parameters or defining a default value in application's settings`); 
-        // }
+
         // let imgEntryPoint = null;
         // let imgCmd = null;
-        let img: ImageReference = props.image ? Util.parseImageReference(props.image) : this.settings.job.defaultImageReference;
-        if (!img.tag) {
-            img.tag = this.settings.job.defaultImageReference.tag;
-        }
-        if (!img.registry) {
-            let registry = null;
-            let organization = null;
-            for (const hp of this.settings.harborProjects) {
-                const projImgs: KubeOpReturn<ImageRepo[]>  = await hm.getHarborImages(hp);
-                if (projImgs.isOk() && projImgs.payload) {
-                    const f:ImageRepo | undefined = projImgs.payload.find((id: ImageRepo) => 
-                        id.name === img.registry && id.artifacts.flatMap((a: Artifact) => a.tags)
-                            .find(t => t === img.tag) !== undefined);
-                    if (f) {
-                        const u = new URL(hp.baseUrl);
-                        registry = `${u.hostname}${u.port !== "" ? ":" + u.port : ""}`;
-                        organization = hp.name;
-                        break;
-                    }
-                } else {
-                    console.error(projImgs.message);
-                }    
-            }
-            if (!registry) {
-                img.registry = this.settings.job.defaultImageReference.registry;
-            } else {
-                img.registry = registry;
-            }
-            if (!organization) {
-                img.organization = this.settings.job.defaultImageReference.organization;
-            } else {
-                img.organization = organization;
-            }
-        }
-
-        const image = `${img.registry}/${img.organization}/${img.name}${img.digest ? `@${img.digest}` : `:${img.tag}`}`;
-        console.log(`Using image '${image}'`);
+        const image = await hm.getFullImageUrl(props.image);
         const args: string[] | undefined = props.commandArgs ? (props.commandArgs.length === 0 ? undefined : props.commandArgs) : props.commandArgs;
         //const command: string[] | undefined = [];//props.command ? cmdArgs : undefined;
         const containers: V1Container[] = [

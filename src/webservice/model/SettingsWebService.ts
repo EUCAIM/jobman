@@ -58,6 +58,7 @@ export interface Job {
     annotationDatasetsList: string;
     annotations?: Annotation[] | null;
     //datasetsList?: string | null;
+    defaultImage: string;
     defaultImageReference: ImageReference;
     userConfigmap: string | null | undefined,
     priorityClassName?: string | null;
