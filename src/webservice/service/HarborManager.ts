@@ -98,7 +98,7 @@ export default class HarborManager {
                     const rArtifacts: Response = await this.fetchCustom(`${artsUrl}?page_size=${repo.artifact_count}`, 
                         {
                             agent,
-                            ...hp.token && {headers: [["Autorization", `Bearer ${hp.token}`]]}
+                            ...hp.token && {headers: [["authorization", `basic ${hp.token}`]]}
                         });
                     if (rArtifacts.ok) {
                         const arts: HarborRespositoryArtifact[] = await rArtifacts.json() as HarborRespositoryArtifact[];
@@ -136,7 +136,7 @@ export default class HarborManager {
                             // }
                         }
                     } else {
-                        console.warn(`Unable to load artifacts from ${artsUrl}`);
+                        console.warn(`Unable to load artifacts from ${artsUrl}, error: '${await rArtifacts.text()}'`);
                     }
                 } 
                 ++pageNum;      
