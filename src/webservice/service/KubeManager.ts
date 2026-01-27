@@ -519,6 +519,7 @@ export default class KubeManager {
         // let imgEntryPoint = null;
         // let imgCmd = null;
         const image = await hm.getFullImageUrl(props.image);
+        console.log(`Using image '${image}'`);
         const args: string[] | undefined = props.commandArgs ? (props.commandArgs.length === 0 ? undefined : props.commandArgs) : props.commandArgs;
         //const command: string[] | undefined = [];//props.command ? cmdArgs : undefined;
         const containers: V1Container[] = [
