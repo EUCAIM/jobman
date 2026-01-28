@@ -1,5 +1,6 @@
 
 import type Annotation from "../../common/model/Annotation.js";
+import type ImageReference from "../../common/model/ImageReference.js";
 import type KubeResourcesFlavor from "../../common/model/KubeResourcesFlavor.js";
 
 export enum KubeConfigType {
@@ -48,12 +49,17 @@ export interface SecurityContext {
     supplementalGroups?: Array<number>;
 }
 
+
 export interface Job {
+    serviceAccount: string;
+    serviceAccountTokenSecret: string;
+    kubeRootCASecret: string;
     userNameAnnotation: string;
     annotationDatasetsList: string;
     annotations?: Annotation[] | null;
     //datasetsList?: string | null;
-    defaultImage?: string;
+    defaultImage: string;
+    defaultImageReference: ImageReference;
     userConfigmap: string | null | undefined,
     priorityClassName?: string | null;
     securityContext?: SecurityContext | null;
@@ -61,6 +67,7 @@ export interface Job {
     //affinity: Affinity;
     resources: Resources;
     protectedNamespace: string;
+    k8sLogger: K8sLogger;
 }
 
 export interface OidcSettings {
@@ -69,12 +76,25 @@ export interface OidcSettings {
     realm: string;
     clientId: string;
     clientSecret: string;
+    audiences: string[];
+    resourceAccessRoles: string[];
 }
 
-export default interface HarborProject {
+export interface K8sLogger {
+    image: string;
+    // in seconds
+    sleep: number;
+}
+
+export interface HarborProject {
     baseUrl: string;
     name: string;
     token?: string | null;
+}
+
+export interface PathInfo {
+    prefix: string;
+    api: string;
 }
 
 
@@ -86,6 +106,6 @@ export interface SettingsWebService {
     job: Job;
     oidc: OidcSettings;
     port: string;
-    path: string;
-
+    path: PathInfo;
+    defaultKubeURL?: string | null | undefined;
 }

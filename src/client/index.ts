@@ -74,9 +74,13 @@ export class Main {
             .check()
             .then(msg => msg ? console.log(msg) : () => {})
             .catch(errMesage => console.error(errMesage))
-            // Execute the rest of the program independently of what is return by the new version checker
+            // Execute the rest of the program independently of what is returned by the new version checker
             .finally(() => {
-                this.parseCmdArgs(cmdArg, s, cmdArgs);
+                try {
+                    this.parseCmdArgs(cmdArg, s, cmdArgs);
+                } catch (e: any) {
+                    printError(e);
+                }
             });
 
     }
@@ -227,17 +231,22 @@ export class Main {
 
 }
 
+function printError(e: any) {
+    if (e instanceof ParameterException ||
+            (e instanceof TypeError && JSON.parse(JSON.stringify(e))["code"] === "ERR_PARSE_ARGS_UNKNOWN_OPTION")) {
+        console.error("\x1b[31m", "[ERROR]", "\x1b[0m", e.message);
+    } else {
+        console.error("\x1b[31m", "[ERROR]", "\x1b[0m", String(e));
+    }
+
+}
+
 export function main(args: string[]): number {
     const main = new Main(args);
     try {
         return main.run();
     } catch (e) {
-        if (e instanceof ParameterException ||
-                (e instanceof TypeError && JSON.parse(JSON.stringify(e))["code"] === "ERR_PARSE_ARGS_UNKNOWN_OPTION")) {
-            console.error("\x1b[31m", "[ERROR]", "\x1b[0m", e.message);
-        } else {
-            console.error("\x1b[31m", "[ERROR]", "\x1b[0m", String(e));
-        }
+        printError(e);
         return 1;
     }
 }
