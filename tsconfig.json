@@ -10,13 +10,13 @@
     "lib": [
       "ES2022"
     ],
-    "module": "ES2022",
-    "target": "ES2020",
+    "module": "nodenext",
+    "target": "ES2022",
     "strict": true,
     "esModuleInterop": true,
     "skipLibCheck": true,
     "forceConsistentCasingInFileNames": true,
-    "moduleResolution": "node",
+    "moduleResolution": "nodenext",
     "allowUnusedLabels": false,
     "allowUnreachableCode": false,
     "exactOptionalPropertyTypes": true,

@@ -11,9 +11,13 @@ import EAuthorizationType from '../model/EAuthorizationType.js';
 export default class OidcAuth {
 
     protected appConf: SettingsWebService;
+    protected realmUrl: string;
+    protected introspectUrl: string;
 
     constructor(appConf: SettingsWebService) {
         this.appConf = appConf;
+        this.realmUrl = `${this.appConf.oidc.url}/realms/${this.appConf.oidc.realm}`
+        this.introspectUrl = `${this.realmUrl}/protocol/openid-connect/token/introspect`;
     }
 
     public  async authenticateAndAuthorize(req: Request): Promise<string | null> {
@@ -28,26 +32,87 @@ export default class OidcAuth {
         }
 
       } else if (userAuth.type === EAuthorizationType.BEARER) {
-        const headers: Headers = new Headers();
-        headers.set("Authorization", `Bearer ${userAuth.token}`);
-        const authR: Response = await fetch(
-        this.appConf.oidc.url + "/realms/" + this.appConf.oidc.realm + "/protocol/openid-connect/userinfo",
-            {
-              method: "GET",
-              headers
-            }
-          );
-        if (authR.status === 200) {
-          const info: any = await authR.json();
-          return info["preferred_username"];//info["sub"];
-        } else {
-          return null;
-        }
+        const data: any = await this.introspectToken(userAuth.token);
+        this.verifyIntrospectToken(data);
+        console.log(data);
+        return data["preferred_username"];
+        // const headers: Headers = new Headers();
+        // headers.set("Authorization", `Bearer ${userAuth.token}`);
+        // const authR: Response = await fetch(
+        // this.appConf.oidc.url + "/realms/" + this.appConf.oidc.realm + "/protocol/openid-connect/userinfo",
+        //     {
+        //       method: "GET",
+        //       headers
+        //     }
+        //   );
+        // if (authR.status === 200) {
+        //   const info: any = await authR.json();
+        //   return info["preferred_username"];//info["sub"];
+        // } else {
+        //   return null;
+        // }
       } else {
         throw  new Error(`Unsupported authorization woth type '${userAuth.type}'`);
       }
 
     }
+
+    protected async introspectToken(token: string, tokenTypeHint = 'access_token'): Promise<any> {
+        const body = new URLSearchParams({ token });
+        if (tokenTypeHint) {
+            body.set('token_type_hint', tokenTypeHint);
+        }
+
+        const res = await fetch(this.introspectUrl, {
+            method: 'POST',
+            headers: {
+            'Authorization': 'Basic ' + Buffer.from(`${this.appConf.oidc.clientId}:${this.appConf.oidc.clientSecret}`).toString('base64'),
+            'Content-Type': 'application/x-www-form-urlencoded'
+            },
+            body: body.toString()
+        });
+
+        if (!res.ok) {
+            const text = await res.text().catch(() => '');
+            throw new Error(`Introspection request failed: ${res.status} ${res.statusText} ${text}`);
+        }
+
+        const data: any = await res.json();
+
+        if (!data.active) {
+            throw new Error('Token is inactive');
+        }
+
+        return data;
+    }
+
+    protected verifyIntrospectToken(introspectResult: any) {
+
+        // Check audience
+        let isAud = false;
+        for (const aud of introspectResult["aud"]) {
+            if (this.appConf.oidc.audiences.includes(aud)) {
+                isAud = true;
+                break;
+            }
+        }
+        if (!isAud)  {
+            throw new AuthenticationError("Token error", "Missing audience.", 401);
+        }
+
+        // Check iss
+        if (introspectResult["iss"]  !==  this.realmUrl) {
+            throw new AuthenticationError("Token error", "Mismatched iss.", 401);
+        }
+
+        //Check resource access roles
+        for (const r of this.appConf.oidc.resourceAccessRoles) {
+            if (!introspectResult["resource_access"]?.[this.appConf.oidc.clientId]?.includes(r)) {
+                throw new AuthenticationError("Token error", "Missing resource access role.", 401);
+            }
+        }
+    }
+
 
     public async auth(token:  string): Promise<UserRepresentation> {
         const reqKap: KeycloakApiToken | null = this.parseReqUserRepresentation(token);

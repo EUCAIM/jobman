@@ -5,6 +5,9 @@
         "gpuResources": [ ]
     },
     "job": {
+        "serviceAccount": "jobman-k8s-logger-serviceaccount",
+        "serviceAccountTokenSecret": "jobman-k8s-logger-serviceaccount-secret",
+        "kubeRootCASecret": "kube-root-ca.crt",
         "userNameAnnotation": "username",
         "protectedNamespace": "jobman-exec",
         "annotations": null,
@@ -22,6 +25,10 @@
             "default": null,
             "label": null,
             "predefined": []
+        },
+        "k8sLogger": {
+            "image": "harbor.chaimeleon-eu.i3m.upv.es/chaimeleon-services/jobman-k8s-logger:latest",
+            "sleep": 15
         }
     },
     "kubeConfig": {
@@ -45,8 +52,18 @@
         "url": "",
         "realm": "CHAIMELEON",
         "clientId": "jobman-service",
-        "clientSecret": ""
+        "clientSecret": "",
+        "audiences": [
+            "jobman-service"
+        ],
+        "resourceAccessRoles": [
+            "manage-own-jobs"
+        ]
     },
     "port": 9000,
-    "path": "/"
+    "path": {
+        "prefix": "",
+        "api": "/api/v1"
+    },
+    "defaultKubeURL": ""
 }

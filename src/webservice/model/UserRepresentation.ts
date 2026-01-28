@@ -1,4 +1,4 @@
-import type KeycloakApiToken from "./KeycloakApiToken";
+import type KeycloakApiToken from "./KeycloakApiToken.js";
 
 export default interface UserRepresentation {
 

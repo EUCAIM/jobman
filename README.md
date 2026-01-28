@@ -20,6 +20,10 @@ Follow the next steps to download and compile the application.
 
 ```bin/jobman```
 
+## Server
+
+The OpenAPI specification (Swagger UI) is available under the __/api-docs__ path, accessible when the jobman server has been started.
+
 ## Settings
 
 **jobman** uses a json settings file. 

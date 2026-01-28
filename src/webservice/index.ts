@@ -8,6 +8,8 @@ import type { ErrorRequestHandler } from "express";
 //import 'dotenv/config';
 //import fs from "node:fs";
 import { parseArgs } from 'node:util';
+import swaggerJsdoc from 'swagger-jsdoc';
+import swaggerUi from 'swagger-ui-express';
 
 
 import { exit } from 'node:process';
@@ -20,6 +22,8 @@ import queueRouter from './route/queue.js';
 import OidcAuth from './service/OidcAuth.js';
 import KubeManager from './service/KubeManager.js';
 import resourcesFlavorsRouter from './route/resources-flavors.js';
+import HarborManager from './service/HarborManager.js';
+import swaggerOptions from './swagger.js';
 
 
 //console.log(process.argv);
@@ -35,10 +39,32 @@ const settingsPath = values.settings ?? "";
 const appConf: SettingsWebService = AppConfLoader.getAppConf(settingsPath);//JSON.parse(fs.readFileSync(settingsPath, { encoding: 'utf8', flag: 'r' }));
 const oidcAuth = new OidcAuth(appConf);
 const km = new KubeManager(appConf);
+const hm = new HarborManager(appConf);
 // /const appConfig = AppConfig.get();
 console.log(`Jobman web service version '${process.env["npm_package_version"]}'`);
 const app: Express = express();
 
+
+const apiPath =  appConf.path.prefix + appConf.path.api;
+swaggerOptions.definition?.["servers"].push(
+     { url: apiPath, description: 'This server' }
+)
+const swaggerSpec = swaggerJsdoc(swaggerOptions);
+
+app.get('/swagger.json', (_req, res) => {
+  res.setHeader('Content-Type', 'application/json');
+  res.send(swaggerSpec);
+});
+app.use(
+  `${appConf.path.prefix}/api-docs/`,
+  swaggerUi.serve,
+  swaggerUi.setup(swaggerSpec, {
+    explorer: true,
+    swaggerOptions: {
+      persistAuthorization: true
+    }
+  })
+);
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 //app.use(express.static(path.join(__dirname, 'public')));
@@ -46,10 +72,10 @@ app.use(express.urlencoded({ extended: false }));
 //app.use(BodyParser.json({ limit: appConfig.resultPostSize }));
 //app.use(BodyParser.urlencoded({ extended: true }));
 //app.use(upload.array());
-app.use(appConf.path + "/jobs", jobsRouter(oidcAuth, km));
-app.use(appConf.path + "/images", imagesRouter(oidcAuth, km));
-app.use(appConf.path + "/queue", queueRouter(oidcAuth, km));
-app.use(appConf.path + "/resources-flavors", resourcesFlavorsRouter(oidcAuth, km));
+app.use(apiPath + "/jobs", jobsRouter(oidcAuth, km, hm));
+app.use(apiPath + "/images", imagesRouter(oidcAuth, hm));
+app.use(apiPath + "/queue", queueRouter(oidcAuth, km));
+app.use(apiPath + "/resources-flavors", resourcesFlavorsRouter(oidcAuth, km));
 // 404 handler and pass to error handler
 app.use((req: Request, res: Response, next: NextFunction) => {
     next(HttpErrors(404, new BaseError("Not found", "Path " + req.path + " not found on the server", 404)));

@@ -1,12 +1,55 @@
-import AbstractDto from "./AbstractDto.js";
+/**
+ * @openapi
+* components:
+*   schemas:
+*     Tag:
+*       type: object
+*       required:
+*           - name
+*           - entrypoint
+*           - cmd
+*       properties:
+*         name:
+*           type: string
+*         entrypoint:
+*           type: array
+*           items:
+*             type: string 
+*         cmd:
+*           type: array
+*           items:
+*             type: string 
+ */
+export interface Tag {
+    name: string;
+    entrypoint: string[];
+    cmd: string[];
+}
 
-export default class  ImageDetails extends AbstractDto {
+/**
+ * @openapi
+* components:
+*   schemas:
+*     ImageDetails:
+*       type: object
+*       required:
+*           - name
+*           - tags
+*           -  desc
+*       properties:
+*         name:
+*           type: string
+*         tags:
+*           type: array
+*           items:
+*             $ref: '#/components/schemas/Tag' 
+*         desc:
+*           type: [string, 'null']
+ */
+export default interface ImageDetails {
 
     name: string;
-    tags: string[]; 
-    desc?: string;
+    tags: Tag[];
+    desc: string | null;
 
-    public static override from(obj: any) {
-        return Object.assign(new ImageDetails(), obj);
-    }
 }

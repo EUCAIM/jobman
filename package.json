@@ -1,23 +1,26 @@
 {
   "name": "jobman",
-  "version": "2.0.6-BETA",
+  "version": "2.1.4-BETA",
   "main": "./dist/index.ts",
   "exports": {
     "default": "./src/"
   },
   "bin": {
     "jobman": "./bin/jobman",
-    "jobman-webservice": "./bin/jobman-webservice"
+    "jobman-webservice": "./bin/jobman-webservice",
+    "jobman-k8s-logger": "./bin/jobman-k8s-logger"
   },
   "description": "The Kubernetes job manager",
   "dependencies": {
+    "swagger-ui-express": "^5.0.1",
+    "swagger-jsdoc": "6.2.8",
     "@kubernetes/client-node": "^0.18.1",
     "babel-plugin-transform-import-meta": "^2.2.1",
-    "console-table-printer": "^2.12.0",
+    "console-table-printer": "2.12.0",
     "deepmerge": "^4.3.1",
     "loglevel": "^1.9.1",
-    "marked": "^9.1.6",
-    "marked-terminal": "^6.1.1",
+    "marked": "9.1.6",
+    "marked-terminal": "6.2.0",
     "node-fetch":"^3.3.2",
     "tar-stream": "3.1.5",
     "uuid": "^10.0.0",
@@ -35,7 +38,8 @@
     "dev": "nodemon --exec 'npm start'",
     "start-webservice": "ts-node-esm src/webservice/index.ts",
     "prod-webservice": "node dist/webservice/index.js",
-    "dev-webservice": "nodemon --exec 'npm start-webservice'",
+    "prod-k8s-logger": "node dist/k8s-logger/index.js",
+    "dev-webservice": "nodemon --watch src --ext ts,js,json --exec \"node --loader ts-node/esm src/webservice/index.ts\" --",
     "test": "NODE_OPTIONS=--experimental-vm-modules npx jest",
     "build": "node_modules/.bin/tsc && cp usage.md examples.md ./dist/"
   },
@@ -54,6 +58,8 @@
     "@typescript-eslint/eslint-plugin": "^7.11.0"
   },
   "devDependencies": {
+    "@types/swagger-ui-express": "^4.1.8",
+    "@types/swagger-jsdoc": "^6.0.4",
     "ts-node": "^10.9.2",
     "@jest/globals": "^29.7.0",
     "@types/jest": "^29.5.12",
