@@ -14,7 +14,7 @@ import ParameterException from '../../common/model/exception/ParameterException.
 import type SubmitProps from '../../common/model/args/SubmitProps.js';
 //import NotImplementedException from '../model/exception/NotImplementedException.js';
 import { KubeOpReturn, KubeOpReturnStatus } from '../../common/model/KubeOpReturn.js';
-import UnhandledValueException from '../model/exception/UnhandledValueException.js';
+import UnhandledValueException from '../../common/model/exception/UnhandledValueException.js';
 import KubeException from '../model/exception/KubeException.js';
 import type DetailsProps from '../../common/model/args/DetailsProps.js';
 import type LogProps from '../../common/model/args/LogProps.js';
