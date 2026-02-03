@@ -13,7 +13,7 @@ cp -r $SCRIPT_DIR/src/common $RELEASE_DIR/src
 
 if [ "$1" == "webservice" ]; then
     cp -r $SCRIPT_DIR/src/webserver $RELEASE_DIR/src
-    cp -r $SCRIPT_DIR/src/webserver/settings.json $RELEASE_DIR/settings_example.json
+    # cp -r $SCRIPT_DIR/src/webserver/settings.json $RELEASE_DIR/settings.json
     cp -r $SCRIPT_DIR/src/k8s-logger $RELEASE_DIR/src
     cp $SCRIPT_DIR/bin/jobman-k8s-logger $SCRIPT_DIR/bin/jobman-webservice $RELEASE_DIR/bin
     #RELEASE_DIR=$RELEASE_DIR/jobman-server
@@ -25,7 +25,7 @@ elif [ "$1" == "client" ]; then
 
     cp -r $SCRIPT_DIR/usage.md $SCRIPT_DIR/examples.md $RELEASE_DIR
     cp -r $SCRIPT_DIR/src/client $RELEASE_DIR/src
-    cp -r $SCRIPT_DIR/src/client/settings.json $RELEASE_DIR/settings_example.json
+    # cp -r $SCRIPT_DIR/src/client/settings.json $RELEASE_DIR/dist/client/settings.json
     cp $SCRIPT_DIR/bin/jobman $RELEASE_DIR/bin
     jq 'del(.dependencies."@kubernetes/client-node", .dependencies."swagger-ui-express", .dependencies."swagger-jsdoc")' $SCRIPT_DIR/package.json > $RELEASE_DIR/package.json
 else
@@ -43,5 +43,5 @@ npm run build
 rm -rf $RELEASE_DIR/node_modules
 npm install --omit=dev
 
-tar -czf jobman.tar.gz --transform='s|^|jobman/|' bin dist node_modules README.md settings_example.json package.json
+tar -czf jobman.tar.gz --transform='s|^|jobman/|' bin dist node_modules README.md package.json
 
