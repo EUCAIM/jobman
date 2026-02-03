@@ -1,5 +1,5 @@
 
-Checkout jobman source code, releases, and documentation at: `https://github.com/chaimeleon-eu/jobman`
+Checkout jobman source code, releases, and documentation at: `https://github.com/EUCAIM/jobman`
 
 
 Usage examples:
