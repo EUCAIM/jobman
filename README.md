@@ -1,53 +1,74 @@
 # jobman
 The Kubernetes job manager
 
-## Installation
+## System
 
-**jobman** is written in Typescript and uses Node.
-Follow the next steps to download and compile the application.
+**jobman** consists of tqo applications: a server exposing a REST API and a client to simplify the work with the server.
+Both are written in Typescript and use Node.
 
-- Be sure you have node installed on your system
-- Clone the github repo on your computer, a __jobman__ directory should be created with the sources inside, which we call the JOBMAN_ROOT from now on
-- Install the needed libraries, run the following command inside JOBMAN_ROOT; a new folder __node_modules__ should be created, where all dependencies are downloaded from the npm online registry
+## Common
 
-```npm install```
+These sections apply to both the client and the server applications.
 
-- Compile the typescript code into javascript using the next command inside JOBMAN_ROOT, a folder __dist__ should appear with the javascript code 
+### Settings
 
-```npx tsc```
+**jobman** uses a json settings file. 
+We included a template for it with the source code.
+It is used by default by the application.
 
-- Run the app using the script in the JOBMAN_ROOT/__bin__ directory; it should print the version of **jobman** on the console
+You can also pass a path to a __settings.json__ file on the command line using the **-s**/**--settings** argument.
+Check the full description of comand line options in the [usage.md](usage.md) file.
 
-```bin/jobman```
+### Job naming
+
+When you submit a job, you can specify a name. 
+If you don't, **jobman** will generate a UUID v4 and use it for generating the name. 
+
+IMPORTANT: for both cases, the internal job name will be prefixed by your OIDC user name (i.e. the "preferred_username" field in OIDC). DO NOT USE this prefixed name in your commands when you need to pass the name of the job as a parameter. This is for your information only and sometimes **jobman** will use this name internally.
+
+### Ephemeral storage
+
+Jobman launches jobs on the Kubernetes platform.
+A job can have multiple pods, although jobman doesn't support that at the moment.
+Each pod can have multiple containers which again is not something that jobman can handle.
+During the execution, you will have access to ephemeral and (maybe) persistent storage.
+
+### Containers
+
+Please keep in mind that the actual storage available during a job execution is ephemeral, unless specifically stated (for instance network mounts like NFS or CEPH).
+Be sure to check which locations in the directory structure of the container are actually persistent before launching a workload and risk losing the whole outpuṫ.
+You may be able to retrieve data saved on the ephemeral storage, but it depends on the enacted Kubernetes policies (such as container removal operations for completed -- successfully or not -- jobs), therefore we strongly advise against this. 
+
+### Logs 
+
+We are also advising against relying on jobs' logs stored on the Kubernetes job itself (the console stdout and stderr is stored at container level and can be retrieved with the **logs** command).
+If you want to avoid losing access to the logs, be sure to store the console output on a non-ephemeral storage location.
+If you are interested why, please continue reading through the next paragraph. 
+
+Each time you launch a job, a container is created on a Kubernetes node.
+This container occupies not only CPU, RAM, and maybe GPU (if requested), but also disk space.
+Once the job execution finishes (successfully or not), the lowest execution unit (the container) frees up the CPU(s), RAM and GPU(s).
+The disk space is not released entirely, therefore each time a job ends, more disk space gets used.
+Kubernetes has an eviction policy which may remove the containers after a certain time or when the disk capacity 
+
+### Max run time
+
+In order to allow the fair use of the platform, the jobs are not allowed to run forever. Please check the maximum runtime of each flavor by calling **resources-flavors**. The command's output contains the maximum run time allowed on the platform for each resource flavor. If a job doesn't finish within the allotted time, it will be deleted automatically. Please take into account this limitation to avoid losing the progress.
 
 ## Server
 
-The OpenAPI specification (Swagger UI) is available under the __/api-docs__ path, accessible when the jobman server has been started.
+The OpenAPI specification (Swagger UI) is available under the __/api-docs__ path (e.g. http://localhost:8080/api-docs), accessible when the server application has been started.
 
-## Settings
-
-**jobman** uses a json settings file. 
-We include a template with the source code.
-This template is used by default by the application.
-You can customize it directly, just be sure to modify the one in the __dist__ directory, not the one in __src__.
-
-A second way to customize the settings is to create a __.jobman/settings.json__ in the user's home directory.
-The values found in this file override those found in the template.
-
-Finally, you can pass a path to a __settings.json__ file on the command line using the -s/--settings argument.
-Check the full description of comand line arguments in the [usage.md](usage.md) file.
-
-## Job naming
-
-When you submit a job, you can optionally specify a name. 
-If you don't, **jobman** will generate a UUID v4 and use it for generating the name. 
-
-IMPORTANT: for both cases, the internal job name will be prefixed by your OIDC user name (i.e. the "preffered_username" field in OIDC) followed by two dashes (--). DO NOT USE this name in your commands when you need to pass the name as a parameter. This is for your information only and sometimes **jobman** will use this name.
-
-## Workflow and examples
+## Client
 
 **jobman** can perform multiple operations related to Kubernetes job execution.
 Check the full description of comand line arguments in the [usage.md](usage.md) file.
+
+### Settings
+
+Aside from the common ways to load the settings, the client also searches for a settings json in the user's home directory, at __.jobman/settings.json__.
+This mecahnism is activated only when the user doesn't specify a settings file via the command line.
+The values found in this file override those found in the template.
 
 ### Check the images on Harbor
 
@@ -136,42 +157,28 @@ When you need more details of a specific job, use the **details** command follow
 
 ```jobman details -j <job_name>```
 
-## Ephemeral storage
+## Release
 
-Jobman launches jobs on the Kubernetes platform.
-A job can have multiple pods, although jobman doesn't support that at the moment.
-Each pod can have multiple containers which again is not something that jobman can handle.
-During the execution, you will have access to ephemeral and (maybe) persistent storage.
+Requirements for both building and running:
+- node.js version 22.x or higher
+- npm
 
-### Containers
 
-Please keep in mind that the actual storage available during a job execution is ephemeral, unless specifically stated (for instance network mounts like NFS or CEPH).
-Be sure to check which locations in the directory structure of the container are actually persistent before launching a workload and risk losing the whole outpuṫ.
-You may be able to retrieve data saved on the ephemeral storage, but it depends on the enacted Kubernetes policies (such as container removal operations for completed -- successfully or not -- jobs), therefore we strongly advise against this. 
+Due to the requirements on our platform, the release process doesn't create a standard NPM package.
+It generates a TAR GZ containing all the files needed for the execution (excluding node and npm).
+To do that, run __release.sh__  with one argument, either **client** or **server**, respectively.
+A new folder __build__ will be created where the requested **jobman** application will be prepared.
+At the end of the release script's execution, if everything went well, you will find a file called __jobman.tar.gz__ containing the application and all its dependencies.
 
-### Logs 
 
-We are also advising against relying on jobs' logs stored on the Kubernetes job itself (the console stdout and stderr is stored at container level and can be retrieved with the **logs** command).
-If you want to avoid losing access to the logs, be sure to store the console output on a non-ephemeral storage location.
-If you are interested why, please continue reading through the next paragraph. 
+## Docker container
 
-Each time you launch a job, a container is created on a Kubernetes node.
-This container occupies not only CPU, RAM, and maybe GPU (if requested), but also disk space.
-Once the job execution finishes (successfully or not), the lowest execution unit (the container) frees up the CPU(s), RAM and GPU(s).
-The disk space is not released entirely, therefore each time a job ends, more disk space gets used.
-Kubernetes has an eviction policy which may remove the containers after a certain time or when the disk capacity 
+**jobman** server can pe dockerized using the incuded __Dockerfile__.
+To build the image, simply run:
 
-## Max run time
+```docker build --tag jobman-service:<version> -f ./Dockerfile ./```
 
-In order to allow the fair use of the platform, the jobs are not allowed to run forever. Please check the maximum runtime of each flavor by calling **resources-flavors**. The command's output contains the maximum run time allowed on the platform for each resource flavor. If a job doesn't finish within the allotted time, it will be deleted automatically. Please take into account this limitation to avoid losing the progress.
+## K8s deployment
 
-## Manual release 
-
-Create a jobman deployment without using generating an actual npm package:
-
-- pack it as full distribution, including the source code (with jobman being the root with all files you want to distribute):
-`( export V=$(cat jobman/package.json | jq -r '.version') &&  npm run --prefix jobman build && tar -czvf jobman-${V}-full.tar.gz jobman )`
-
-- only the dist necessary to run the app
-`( export V=$(cat jobman/package.json | jq -r '.version') && npm run --prefix jobman build && find jobman \( -name \bin -o -name \dist -o -name \*.md  -o -name node_modules -o -name \package.json \) -print0 | xargs -0 tar -cvzf jobman-${V}-dist.tar.gz )`
-
+We provide the necessary recipes for deploying **jobman** on a k8s cluster.
+Checkout the __k8s__ folder.
