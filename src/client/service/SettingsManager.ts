@@ -5,6 +5,7 @@ import deepmerge from "deepmerge";
 
 import Util from "../../common/Util.js";
 import type { SettingsClient } from "../model/SettingsClient.js";
+import settings from "../settings.json" with {type: "json"};
 
 export default class SettingsManager {
 
@@ -14,7 +15,7 @@ export default class SettingsManager {
 
     public constructor(settingsPath: string | null | undefined) {
         if (!settingsPath) {
-            this._settings = JSON.parse(fs.readFileSync(path.resolve(Util.getDirName(), 'settings.json'), 'utf8'));
+            this._settings = settings;//JSON.parse(fs.readFileSync(path.resolve(Util.getDirName(), 'settings.json'), 'utf8'));
             // try to read from user's home
             const uH: string = path.join(homedir(), SettingsManager.USER_HOME_PATH);
             if (fs.existsSync(uH)) {
