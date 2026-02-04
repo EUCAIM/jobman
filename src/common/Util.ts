@@ -2,7 +2,7 @@
 import path from 'path';
 import { fileURLToPath } from 'url';
 import EAnnotationType from './model/EAnnotationType.js';
-import UnhandledValueException from '../webservice/model/exception/UnhandledValueException.js';
+import UnhandledValueException from './model/exception/UnhandledValueException.js';
 import type Annotation from './model/Annotation.js';
 import type ImageReference from './model/ImageReference.js';
 

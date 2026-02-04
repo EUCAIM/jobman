@@ -18,6 +18,7 @@ export default class HarborManager {
     protected settings: SettingsWebService;
 
     public constructor(settings: SettingsWebService) {
+        // this.checkSettings(settings);
         this.settings = settings;
     }
 
@@ -185,7 +186,7 @@ export default class HarborManager {
                 console.error(`Cannot extract tag or digest from image name '${submitImage}'`)
             }
             console.log(tag, digest);
-            const matched: string[] = [];
+            let matched: string[] = [];
             // Check all the available repos for the requested image
             for (const hp of this.settings.harborProjects) {
                 const projImgs: KubeOpReturn<ImageRepo[]>  = await this.getHarborImages(hp);
@@ -216,13 +217,16 @@ export default class HarborManager {
                     console.error(projImgs.message);
                 }
             }
+
+            matched = matched.map(i => i.replace(/^https?:\/\//i,''));
             if (matched.length === 0) {
                 throw new Error(`Image '${submitImage}' not found.`);
             } else if (matched.length === 1) {
                 return matched[0] ?? "";
             } else {
-                console.error(`Multiple images matched '${submitImage}': ${matched.join(", ")}`);
-                throw new Error(`Multiple images matched '${submitImage}'. Please contact the administrator, or use the full Docker compatible URL.`);
+                const msg = `Multiple images matched '${submitImage}': ${matched.join(", ")}. Please contact the administrator, or use the full Docker compatible URL.`
+                console.error(msg);
+                throw new Error(msg);
             }
 
             // if (!img.tag) {
@@ -273,5 +277,14 @@ export default class HarborManager {
     protected fetchCustom(url: string, init?: RequestInit): Promise<Response> {
         return fetch(url, init);
     }
-    
+
+    protected checkSettings(settings: SettingsWebService) {
+        // Check if the harbor repos start with http(s)
+        for (const hp of settings.harborProjects) {
+            if (hp.baseUrl.startsWith("http://") || hp.baseUrl.startsWith("https://")) {
+                throw new Error(`Harbor repository with base URL '${hp.baseUrl}' starts with http(s), it shouldn't as per Docker documentation.`)
+            }
+        }
+    }
+
 }
