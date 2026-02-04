@@ -228,46 +228,6 @@ export default class HarborManager {
                 console.error(msg);
                 throw new Error(msg);
             }
-
-            // if (!img.tag) {
-            //     img.tag = this.settings.job.defaultImageReference.tag;
-            // }
-            // if (!img.registry) {
-            //     let registry = null;
-            //     let organization = null;
-            //     const imgNameOrg = img.namespace ? `${img.namespace}/${img.name}` : img.name;
-            //     for (const hp of this.settings.harborProjects) {
-            //         const projImgs: KubeOpReturn<ImageRepo[]>  = await hm.getHarborImages(hp);
-            //         if (projImgs.isOk() && projImgs.payload) {
-            //             const f:ImageRepo | undefined = projImgs.payload.find((id: ImageRepo) => 
-            //                 id.name === imgNameOrg && id.artifacts.flatMap((a: Artifact) => a.tags)
-            //                     .find(t => t === img.tag) !== undefined);
-            //             if (f) {
-            //                 const u = new URL(hp.baseUrl);
-            //                 registry = `${u.hostname}${u.port !== "" ? ":" + u.port : ""}`;
-            //                 organization = hp.name;
-            //                 break;
-            //             }
-            //         } else {
-            //             console.error(projImgs.message);
-            //         }    
-            //     }
-            //     if (!registry) {
-            //         img.registry = this.settings.job.defaultImageReference.registry;
-            //     } else {
-            //         img.registry = registry;
-            //     }
-            //     // if (!organization) {
-            //     //     img.organization = this.settings.job.defaultImageReference.organization;
-            //     // } else {
-            //     //     img.organization = organization;
-            //     // }
-            // }
-
-            // const image = `${img.registry}/${img.namespace}/${img.name}${img.digest ? `@${img.digest}` : `:${img.tag}`}`;
-            // console.log(`Using image '${image}'`);
-            // return image;
-
         } else {
             return this.settings.job.defaultImage;
         }

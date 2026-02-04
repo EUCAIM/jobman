@@ -1,6 +1,5 @@
 
 import type Annotation from "../../common/model/Annotation.js";
-import type ImageReference from "../../common/model/ImageReference.js";
 import type KubeResourcesFlavor from "../../common/model/KubeResourcesFlavor.js";
 
 export enum KubeConfigType {
@@ -59,7 +58,6 @@ export interface Job {
     annotations?: Annotation[] | null;
     //datasetsList?: string | null;
     defaultImage: string;
-    defaultImageReference: ImageReference;
     userConfigmap: string | null | undefined,
     priorityClassName?: string | null;
     securityContext?: SecurityContext | null;
