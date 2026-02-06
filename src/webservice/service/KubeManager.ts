@@ -39,6 +39,7 @@ import type { ClusterWarning, ContainerError } from '../model/JobErrors.js';
 import type HarborManager from './HarborManager.js';
 import type ResourceConsumptionProps from '../../common/model/args/ResourceConsumptionProps.js';
 import type { JobDetailsEnv, JobDetailsResourcesUsage } from '../../common/model/JobDetails.js';
+import type ImageInfo from '../model/ImageInfo.js';
 
 
 export default class KubeManager {
@@ -206,7 +207,10 @@ export default class KubeManager {
             //     }
             //     }
             // ]
+            const image: ImageInfo = await hm.getImageInfo(props.image);
+            const imagePullSecrets = image.imagePullSecrets;
 
+            console.log(`Using image '${image.fullUrl}'`);
             job.spec = {
                 backoffLimit: 0,
                 template: {
@@ -219,7 +223,8 @@ export default class KubeManager {
                         ...securityContext && {securityContext: {...new V1PodSecurityContext(), ...securityContext} },
                         ...priorityClassName && {priorityClassName},
                         //...volumes && {volumes},
-                        containers: await this.getSubmitContainers(props, kr, hm),
+                        containers: await this.getSubmitContainers(image, props, kr, hm),
+                        ...imagePullSecrets && {imagePullSecrets},
                         restartPolicy: "Never"
                     }
                 }
@@ -512,20 +517,18 @@ export default class KubeManager {
         return null;
     }
 
-    protected async getSubmitContainers(props: SubmitProps, kr: KubeResourcesFlavor, 
+    protected async getSubmitContainers(image:ImageInfo, props: SubmitProps, kr: KubeResourcesFlavor, 
             hm: HarborManager): Promise<V1Container[]> {
         const env: Array<V1EnvVar> | undefined = props.env?.map(e => Object.assign(new V1EnvVar(),  e));
 
         // let imgEntryPoint = null;
         // let imgCmd = null;
-        const image = await hm.getFullImageUrl(props.image);
-        console.log(`Using image '${image}'`);
         const args: string[] | undefined = props.commandArgs ? (props.commandArgs.length === 0 ? undefined : props.commandArgs) : props.commandArgs;
         //const command: string[] | undefined = [];//props.command ? cmdArgs : undefined;
         const containers: V1Container[] = [
             {
                 name: KubeManager.CONTAINER_MAIN_NAME,
-                image,
+                image: image.fullUrl,
                 ...env && { env },
                 //...command && {command},
                 ...args && {args},

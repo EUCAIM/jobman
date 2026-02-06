@@ -12,6 +12,7 @@ import type Artifact from "../../common/model/Artifact.js";
 import type Page from "../../common/model/Page.js";
 import type { HarborRespositoryArtifact } from "../model/HarborRespositoryArtifact.js";
 import type ImageRepo from "../../common/model/ImageRepo.js";
+import type ImageInfo from "../model/ImageInfo.js";
 
 export default class HarborManager {
 
@@ -155,7 +156,7 @@ export default class HarborManager {
 
     }
 
-    public async getFullImageUrl(submitImage: string | null | undefined): Promise<string> {
+    public async getImageInfo(submitImage: string | null | undefined): Promise<ImageInfo> {
         if (submitImage) {
             let submitImageName = null;
             let tag = null;
@@ -186,7 +187,7 @@ export default class HarborManager {
                 console.error(`Cannot extract tag or digest from image name '${submitImage}'`)
             }
             console.log(tag, digest);
-            let matched: string[] = [];
+            let matched: ImageInfo[] = [];
             // Check all the available repos for the requested image
             for (const hp of this.settings.harborProjects) {
                 const projImgs: KubeOpReturn<ImageRepo[]>  = await this.getHarborImages(hp);
@@ -209,7 +210,10 @@ export default class HarborManager {
                                                 `@${digest}` : null;
                             }
                             if (tagDigest) {
-                                matched.push(`${fullImgURL}${tagDigest}`);
+                                matched.push({
+                                    fullUrl: `${fullImgURL}${tagDigest}`,
+                                    imagePullSecrets: hp.imagePullSecrets
+                            });
                             }
                         } 
                     }
@@ -218,13 +222,16 @@ export default class HarborManager {
                 }
             }
 
-            matched = matched.map(i => i.replace(/^https?:\/\//i,''));
+            matched = matched.map(i => ({...i, fullUrl: i.fullUrl.replace(/^https?:\/\//i,'')}));
             if (matched.length === 0) {
                 throw new Error(`Image '${submitImage}' not found.`);
             } else if (matched.length === 1) {
-                return matched[0] ?? "";
+                const result = matched[0]; 
+                // need this line because the Typescript compiler doesn't understand the check for one element...
+                if (result === undefined) throw new Error(`Image '${submitImage}' not found.`);
+                return result;
             } else {
-                const msg = `Multiple images matched '${submitImage}': ${matched.join(", ")}. Please contact the administrator, or use the full Docker compatible URL.`
+                const msg = `Multiple images matched '${submitImage}': ${matched.map(i => i.fullUrl).join(", ")}. Please contact the administrator, or use the full Docker compatible URL.`
                 console.error(msg);
                 throw new Error(msg);
             }
