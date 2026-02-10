@@ -104,7 +104,7 @@ export default class DisplayService {
                         columns: [
                           {
                             name: "name",
-                            maxLen: Math.floor(totalNoColsAvailable * 0.25),
+                            maxLen: Math.floor(totalNoColsAvailable * 0.3),
                             title: "Image Name",
                             alignment: 'left'
                           }
@@ -112,7 +112,7 @@ export default class DisplayService {
                         computedColumns:[
                             {
                                 name: "Tags List",
-                                maxLen: Math.floor(totalNoColsAvailable * 0.75),
+                                maxLen: Math.floor(totalNoColsAvailable * 0.7),
                                 function: (row: ImageRepo) => row.artifacts.map(a => a.tags.join(" ")).join("  "), 
                                 alignment: 'left'
                             }
