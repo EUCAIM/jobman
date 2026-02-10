@@ -1,7 +1,7 @@
 
 import type Annotation from "../../common/model/Annotation.js";
-import type ImageReference from "../../common/model/ImageReference.js";
 import type KubeResourcesFlavor from "../../common/model/KubeResourcesFlavor.js";
+import type ImageInfo from "./ImageInfo.js";
 
 export enum KubeConfigType {
     default = "default", 
@@ -58,8 +58,7 @@ export interface Job {
     annotationDatasetsList: string;
     annotations?: Annotation[] | null;
     //datasetsList?: string | null;
-    defaultImage: string;
-    defaultImageReference: ImageReference;
+    defaultImage: ImageInfo;
     userConfigmap: string | null | undefined,
     priorityClassName?: string | null;
     securityContext?: SecurityContext | null;
@@ -86,10 +85,15 @@ export interface K8sLogger {
     sleep: number;
 }
 
+export interface ImagePullSecret {
+    name: string;
+}
+
 export interface HarborProject {
     baseUrl: string;
     name: string;
     token?: string | null;
+    imagePullSecrets?: ImagePullSecret[] | null | undefined;
 }
 
 export interface PathInfo {
