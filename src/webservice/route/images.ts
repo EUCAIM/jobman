@@ -1,7 +1,7 @@
 import express from "express";
 import type { Request, Response, NextFunction } from "express";
 import type OidcAuth from "../service/OidcAuth.js";
-import commonRequest from "./common.js";
+import { commonRequest, pathParam } from "./common.js";
 import type Page from "../../common/model/Page.js";
 import type HarborManager from "../service/HarborManager.js";
 import type ImageRepo from "../../common/model/ImageRepo.js";
@@ -68,7 +68,7 @@ const imagesRouter = function(oidcAuth: OidcAuth, hm: HarborManager) {
     *                $ref: '#/components/schemas/ErrorResponse'
      */
     routerObj.get('/:imageName/description', async (req: Request, res: Response, next: NextFunction) => {
-      commonRequest<string | null>(req, res, next, oidcAuth, hm.imageDetails.bind(hm, { image: req.params["imageName"] ?? ""}));
+      commonRequest<string | null>(req, res, next, oidcAuth, hm.imageDetails.bind(hm, { image: pathParam(req, "imageName") }));
     });
 
     return routerObj;

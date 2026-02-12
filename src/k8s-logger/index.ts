@@ -1,7 +1,7 @@
 import { parseArgs } from 'node:util';
 import { exit } from "node:process";
 import { readFileSync, writeFileSync } from 'fs';
-import { CoreV1Api, KubeConfig } from '@kubernetes/client-node';
+import { CoreV1Api, KubeConfig, V1Pod } from '@kubernetes/client-node';
 
 const NAMESPACE_PATH = '/var/run/secrets/kubernetes.io/serviceaccount/namespace';
 // IN SECONDS
@@ -10,10 +10,7 @@ const DEFAULT_SLEEP = 10;
 const sleepF = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
 async function isContainerTerminated(k8sCoreApi: CoreV1Api, pod: string, namespace: string, container: string): Promise<boolean> {
-    const { body: statusOnly } = await k8sCoreApi.readNamespacedPodStatus(
-        pod,
-        namespace
-    );
+    const statusOnly: V1Pod = await k8sCoreApi.readNamespacedPodStatus({ name: pod, namespace });
     if (!statusOnly) return false;
     const containerStatuses = statusOnly.status?.containerStatuses || [];
     const entry = containerStatuses.find((c) => c.name === container);
@@ -21,8 +18,8 @@ async function isContainerTerminated(k8sCoreApi: CoreV1Api, pod: string, namespa
 }
 
 async function getLogs(k8sCoreApi: CoreV1Api, pod: string, namespace: string, container: string): Promise<string> {
-     const res = await k8sCoreApi.readNamespacedPodLog(pod, namespace, container);
-     return res.body;
+     const res = await k8sCoreApi.readNamespacedPodLog({ name: pod, namespace, container });
+     return res;
 }
 
 async function main(args: string[]): Promise<number> {

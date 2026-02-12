@@ -5,7 +5,7 @@ import type OidcAuth from '../service/OidcAuth.js';
 import type AbstractDto from '../../common/model/AbstractDto.js';
 import type ErrorResponse from '../../common/model/ErrorResponse.js';
 
-async function commonRequest<T extends AbstractDto | string | null>(req: Request, res: Response, next: NextFunction, oidcAuth: OidcAuth, method: Function) {
+export async function commonRequest<T extends AbstractDto | string | null>(req: Request, res: Response, next: NextFunction, oidcAuth: OidcAuth, method: Function) {
     let payload: KubeOpReturn<T | null> | null = null;
     let respPayload: ErrorResponse | any = null;
     let sc: number = 501;
@@ -45,4 +45,18 @@ async function commonRequest<T extends AbstractDto | string | null>(req: Request
   
   }
 
-export default commonRequest;
+export function pathParam(req: Request, param: string): string {
+    const jn = req.params[param];
+    let value = null;
+    if (Array.isArray(jn)) {
+        throw new Error(`Multiple values found for param '${param}': ${jn.join(", ")}`);
+    } else {
+        value = jn
+    }
+    if (value) {
+        return value;
+    } else {
+        throw new Error(`Missing value for path param '${param}'`);
+    }
+}
+

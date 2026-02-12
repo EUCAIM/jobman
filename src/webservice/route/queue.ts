@@ -4,7 +4,7 @@ import type KubeManager from '../service/KubeManager.js';
 import type { Request } from 'express';
 import type { Response } from 'express';
 import type { NextFunction } from 'express';
-import commonRequest from './common.js';
+import { commonRequest } from './common.js';
 import type QueueResultDisplay from '../../common/model/QueueResultDisplay.js';
 
 const queueRouter = function(oidcAuth: OidcAuth, km: KubeManager) {
