@@ -11,7 +11,8 @@ import type LogProps from "../../common/model/args/LogProps.js";
 import type DeleteProps from "../../common/model/args/DeleteProps.js";
 import type KubeResourcesFlavor from "../../common/model/KubeResourcesFlavor.js";
 import JobInfo from "../../common/model/JobInfo.js";
-import TerminalRenderer from "marked-terminal";
+
+import { markedTerminal } from 'marked-terminal';
 import type QueueResultDisplay from "../../common/model/QueueResultDisplay.js";
 import type Page from "../../common/model/Page.js";
 import type { Dictionary } from "console-table-printer/dist/src/models/common.js";
@@ -125,12 +126,12 @@ export default class DisplayService {
     }
 
     public imageDetails(props: ImageDetailsProps): void {
-        //marked.use(markedTerminal());
+        marked.use(markedTerminal());
 
-        marked.setOptions({
-            // Define custom renderer
-            renderer: new TerminalRenderer()
-          });
+        // marked.setOptions({
+        //     // Define custom renderer
+        //     renderer: new TerminalRenderer()
+        //   });
         this.km.imageDescription(props)
             .then(r => this.simpleMsg(r,  () => console.log(marked(r.payload ?? "&lt;__No description available__&gt;"))))
             .catch(e => this.simpleMsg(new KubeOpReturn(KubeOpReturnStatus.Error,  e.message ?? String(e), null)));
