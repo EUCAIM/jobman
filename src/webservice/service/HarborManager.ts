@@ -236,7 +236,11 @@ export default class HarborManager {
                 throw new Error(msg);
             }
         } else {
-            return this.settings.job.defaultImage;
+            if (this.settings.job.defaultImage && this.settings.job.defaultImage.fullUrl) {
+                return this.settings.job.defaultImage;
+            } else {
+                throw new Error(`No default image defined by the platform. Please specify a valid input image.`)
+            }
         }
         
     }

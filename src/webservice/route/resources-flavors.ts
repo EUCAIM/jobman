@@ -4,7 +4,7 @@ import type KubeManager from '../service/KubeManager.js';
 import type { Request } from 'express';
 import type { Response } from 'express';
 import type { NextFunction } from 'express';
-import commonRequest from './common.js';
+import { commonRequest } from './common.js';
 import type Page from '../../common/model/Page.js';
 import type KubeResourcesFlavor from '../../common/model/KubeResourcesFlavor.js';
 

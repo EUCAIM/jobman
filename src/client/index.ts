@@ -4,7 +4,7 @@ import { exit } from "node:process";
 import fs from "node:fs";
 import path from 'path';
 import { marked } from "marked";
-import TerminalRenderer from "marked-terminal";
+import { markedTerminal } from 'marked-terminal';
 
 import type EnvEntry from "../common/model/EnvEntry.js";
 import DisplayService from "./service/DisplayService.js";
@@ -179,10 +179,11 @@ export class Main {
     }
     
     protected printH(): void  {
-        marked.setOptions({
-            // Define custom renderer
-            renderer: new TerminalRenderer()
-          });
+        marked.use(markedTerminal());
+        // marked.setOptions({
+        //     // Define custom renderer
+        //     renderer: new TerminalRenderer()
+        //   });
         console.log(marked(fs.readFileSync(path.join(path.dirname(Util.getDirName()), Main.USAGE_FILE), {encoding: "ascii", flag: "r" })));
     }
     
@@ -191,10 +192,12 @@ export class Main {
     }
 
     protected printExamples(): void {
-        marked.setOptions({
-            // Define custom renderer
-            renderer: new TerminalRenderer()
-          });
+
+        marked.use(markedTerminal());
+        // marked.setOptions({
+        //     // Define custom renderer
+        //     renderer: new TerminalRenderer()
+        //   });
         console.log(marked(fs.readFileSync(path.join(path.dirname(Util.getDirName()), Main.EXAMPLES_FILE), {encoding: "ascii", flag: "r" })));
     }
  
