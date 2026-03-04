@@ -2,16 +2,16 @@ apiVersion: v1
 kind: Namespace
 metadata:
   name: jobman-service
-annotations:
-  description: This namespace contains all the resources needed to run the Jobman webservice
+  annotations:
+    description: This namespace contains all the resources needed to run the Jobman webservice
 
 ---
 apiVersion: v1
 kind: Namespace
 metadata:
   name: jobman-service-exec
-annotations:
-  description: This namespace contains all the resources needed to run the jobs launched by Jobman, including the jobs themselves
+  annotations:
+    description: This namespace contains all the resources needed to run the jobs launched by Jobman, including the jobs themselves
 ---
 
 apiVersion: v1
@@ -21,8 +21,8 @@ metadata:
   #   kubernetes.io/enforce-mountable-secrets: "true"
   name: jobman-serviceaccount
   namespace: jobman-service
-annotations:
-  description: Service account to launch jobman under, needed to assign roles that allows access to resources in another namespace (where the jobs are actually launched)
+  annotations:
+    description: Service account to launch jobman under, needed to assign roles that allows access to resources in another namespace (where the jobs are actually launched)
 ---
 
 kind: Role
@@ -30,8 +30,8 @@ apiVersion: rbac.authorization.k8s.io/v1
 metadata:
   name: role-jobman-serviceaccount
   namespace: jobman-service-exec
-annotations:
-  description: Role from the namespace where the jobs are acttually launched, allowing Jobman to manage the jobs and their related resources
+  annotations:
+    description: Role from the namespace where the jobs are acttually launched, allowing Jobman to manage the jobs and their related resources
 rules:
 - apiGroups:
         - ""
@@ -55,8 +55,8 @@ apiVersion: rbac.authorization.k8s.io/v1
 metadata:
   name: role-binding-jobman-serviceaccount
   namespace: jobman-service-exec
-annotations:
-  description: Bind the Jobman's service account from its namespace to the role in the namespace where the jobs are launched
+  annotations:
+    description: Bind the Jobman's service account from its namespace to the role in the namespace where the jobs are launched
 subjects:
 - kind: ServiceAccount
   name: jobman-serviceaccount
@@ -73,8 +73,8 @@ apiVersion: rbac.authorization.k8s.io/v1
 metadata:
   name: role-jobman-serviceaccount-configmap
   namespace: jobman-service
-annotations:
-  description: Allows Jobman's service account to access configmaps, needed to access the jobs' queue that is managed by a cron job not jobman itself
+  annotations:
+    description: Allows Jobman's service account to access configmaps, needed to access the jobs' queue that is managed by a cron job not jobman itself
 rules:
 - apiGroups:
         - ""
@@ -88,8 +88,8 @@ apiVersion: rbac.authorization.k8s.io/v1
 metadata:
   name: role-binding-jobman-serviceaccount-configmap
   namespace: jobman-service
-annotations:
-  description: Bind Jobman's service account to the role giving it access to configmaps, needed to access the jobs' queue that is managed by a cron job not jobman itself
+  annotations:
+    description: Bind Jobman's service account to the role giving it access to configmaps, needed to access the jobs' queue that is managed by a cron job not jobman itself
 subjects:
 - kind: ServiceAccount
   name: jobman-serviceaccount
@@ -106,8 +106,8 @@ kind: ServiceAccount
 metadata:
   name: jobman-k8s-logger-serviceaccount
   namespace: jobman-service
-annotations:
-  description: Needed for the k8s-logger sidecar container launched with a job when logs are stored in a file
+  annotations:
+    description: Needed for the k8s-logger sidecar container launched with a job when logs are stored in a file
 automountServiceAccountToken: false
 
 ---
@@ -119,8 +119,7 @@ metadata:
   namespace: jobman-service-exec
   annotations:
     kubernetes.io/service-account.name: jobman-k8s-logger-serviceaccount
-annotations:
-  description: Predefined token for the service account of the k8s-logger sidecar container,  to be mounted manually in the sidecar
+    description: Predefined token for the service account of the k8s-logger sidecar container,  to be mounted manually in the sidecar
 type: kubernetes.io/service-account-token
 
 ---
@@ -130,8 +129,8 @@ apiVersion: rbac.authorization.k8s.io/v1
 metadata:
   name: role-jobman-k8s-logger-serviceaccount
   namespace: jobman-service-exec
-annotations:
-  description: Rights needed by the k8s-logger sidecar container of every job
+  annotations:
+    description: Rights needed by the k8s-logger sidecar container of every job
 rules:
 - apiGroups: [""]
   resources: ["pods"]
@@ -147,8 +146,8 @@ apiVersion: rbac.authorization.k8s.io/v1
 metadata:
   name: role-binding-jobman-k8s-logger-serviceaccount
   namespace: jobman-service-exec
-annotations:
-  description: Binds the roles needed by the k8s-logger sidecar to its service account
+  annotations:
+    description: Binds the roles needed by the k8s-logger sidecar to its service account
 subjects:
 - kind: ServiceAccount
   name: jobman-k8s-logger-serviceaccount
