@@ -179,7 +179,7 @@ metadata:
 spec:
   ports:
   - port: 8080
-    target: 8080
+    targetPort: 8080
     protocol: TCP
     name: api
   selector:
