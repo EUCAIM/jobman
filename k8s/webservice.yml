@@ -202,13 +202,12 @@ spec:
       labels:
         app: jobman-service-deployment
     spec:
-      replicas: 1
       priorityClassName: core-services
       nodeSelector:
         chaimeleon.eu/target: core-services
       serviceAccountName: jobman-serviceaccount
       containers:
-      - image: harbor.chaimeleon-eu.i3m.upv.es/chaimeleon-services/jobman-service:2.0.0-BETA
+      - image: harbor.chaimeleon-eu.i3m.upv.es/chaimeleon-services/jobman-service:2.2.2
         imagePullPolicy: Always
         name: jobman-service-deployment-container
         env:
