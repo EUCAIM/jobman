@@ -1,7 +1,6 @@
 
 import https from "https";
-import fetch from "node-fetch";
-import type { RequestInit, Response } from "node-fetch";
+import type { Response } from "node-fetch";
 
 import type ImageDetailsProps from "../../common/model/args/ImageDetailsProps.js";
 import { KubeOpReturnStatus, KubeOpReturn } from "../../common/model/KubeOpReturn.js";
@@ -13,6 +12,7 @@ import type Page from "../../common/model/Page.js";
 import type { HarborRespositoryArtifact } from "../model/HarborRespositoryArtifact.js";
 import type ImageRepo from "../../common/model/ImageRepo.js";
 import type ImageInfo from "../model/ImageInfo.js";
+import Util from "../../common/Util.js";
 
 export default class HarborManager {
 
@@ -33,11 +33,11 @@ export default class HarborManager {
             const agent = new https.Agent({
                 rejectUnauthorized: false,
             });
-            const response: Response = await this.fetchCustom(reposUrl, {
+            const response: Response | null = await Util.fetchRetry(reposUrl, {
                 agent,
                 ...hp.token && {headers: [["authorization", `Basic ${hp.token}`]]}
             });
-            if (response.ok) {
+            if (response?.ok) {
                 const prjRepos: HarborRepository[] = await response.json() as HarborRepository[];
                 for (const repo of prjRepos) {
                     // Get repo name, remove project name 
@@ -81,12 +81,12 @@ export default class HarborManager {
         const result: ImageRepo[] = [];
         let error = false;
         do {
-            const response: Response = await this.fetchCustom(`${reposUrl}?page=${pageNum}&page_size=${pageSize}`, 
+            const response: Response | null = await Util.fetchRetry(`${reposUrl}?page=${pageNum}&page_size=${pageSize}`, 
                 {
                     agent,
                     ...hp.token && {headers: [["authorization", `Basic ${hp.token}`]]}
                 });
-            if (response.ok) {
+            if (response?.ok) {
                 const prjRepos: HarborRepository[] = await response.json() as HarborRepository[];
                 reposCnt = prjRepos.length;
                 for (const repo of prjRepos) {
@@ -97,12 +97,12 @@ export default class HarborManager {
                     result.push({name, repository: repo.name, artifacts, description})
                     
                     const artsUrl = `${reposUrl}/${name}/artifacts`;
-                    const rArtifacts: Response = await this.fetchCustom(`${artsUrl}?page_size=${repo.artifact_count}`, 
+                    const rArtifacts: Response | null = await Util.fetchRetry(`${artsUrl}?page_size=${repo.artifact_count}`, 
                         {
                             agent,
                             ...hp.token && {headers: [["authorization", `basic ${hp.token}`]]}
                         });
-                    if (rArtifacts.ok) {
+                    if (rArtifacts?.ok) {
                         const arts: HarborRespositoryArtifact[] = await rArtifacts.json() as HarborRespositoryArtifact[];
                         
                         for (const art of arts ) {
@@ -138,13 +138,13 @@ export default class HarborManager {
                             // }
                         }
                     } else {
-                        console.warn(`Unable to load artifacts from ${artsUrl}, error: '${await rArtifacts.text()}'`);
+                        console.warn(`Unable to load artifacts from ${artsUrl}, error: '${await rArtifacts?.text()}'`);
                     }
                 } 
                 ++pageNum;      
             } else {
                 error = true;
-                console.error(`Unable to load repositories from '${reposUrl}?page=${pageNum}&page_size=${pageSize}', API responded with code '${response.statusText}' and message: ${JSON.stringify(await response.json())}`);
+                console.error(`Unable to load repositories from '${reposUrl}?page=${pageNum}&page_size=${pageSize}', API responded with code '${response?.statusText}' and message: ${JSON.stringify(await response?.json())}`);
                 // If the first page fails, don't try again
                 break;
             }
@@ -245,9 +245,9 @@ export default class HarborManager {
         
     }
 
-    protected fetchCustom(url: string, init?: RequestInit): Promise<Response> {
-        return fetch(url, init);
-    }
+    // protected fetchCustom(url: string, init?: RequestInit): Promise<Response> {
+    //     return fetch(url, init);
+    // }
 
     protected checkSettings(settings: SettingsWebService) {
         // Check if the harbor repos start with http(s)

@@ -4,6 +4,8 @@ import { fileURLToPath } from 'url';
 import EAnnotationType from './model/EAnnotationType.js';
 import UnhandledValueException from './model/exception/UnhandledValueException.js';
 import type Annotation from './model/Annotation.js';
+import fetch from "node-fetch";
+import type { RequestInit, Response } from "node-fetch";
 
 export default class Util {
 
@@ -43,6 +45,33 @@ export default class Util {
             }
         }
         return r;
+    }
+
+    public static async fetchRetry(url: string, init?: RequestInit, retry = 3, delayMs = 8000): Promise<Response | null> {
+        if (retry < 1) {
+            throw new Error(`the retry value must be equal or higher to 1.`);
+        }
+        for (let a = 1; a <= retry; ++a) {
+            try {
+                const r = await fetch(url, init);
+                return r;
+            } catch (e: any) {
+                console.error(e["code"]);
+                // Throw the error if max attempts
+                if (a === retry) {
+                    throw e;
+                } else {
+                    // If code not one of these, throw error
+                    if (!['EAI_AGAIN', 'ECONNRESET', 'ETIMEDOUT', 'ECONNREFUSED'].includes(e["code"])) { 
+                        throw e; 
+                    } else {
+                        console.warn(`Error code '${e["code"]}' when instrospecting token, attempt ${a}/${retry}, sleeping ${delayMs}ms`);
+                        await new Promise(r => setTimeout(r, delayMs));
+                    }
+                }
+            }
+        }
+        return null;
     }
 
     // public static async getEntrypointAndCmd(registry: string, repo: string, tag: string) {
