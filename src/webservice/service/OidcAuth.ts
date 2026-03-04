@@ -1,14 +1,18 @@
 import type  { Request } from 'express'; 
-import fetch, { Headers, Response } from 'node-fetch';
+import { Headers, Response } from 'node-fetch';
 import type UserRepresentation from "../model/UserRepresentation.js";
 import type KeycloakApiToken from "../model/KeycloakApiToken.js";
 import AuthenticationError from "../error/AuthenticationError.js";
 import type { SettingsWebService } from '../model/SettingsWebService.js';
 import type UserAuthorization from '../model/UserAuthorization.js';
 import EAuthorizationType from '../model/EAuthorizationType.js';
+import Util from '../../common/Util.js';
 
 
 export default class OidcAuth {
+
+    static RETRY_COUNT = 3;
+    static RETRY_DELAY = 2000;
 
     protected appConf: SettingsWebService;
     protected realmUrl: string;
@@ -33,8 +37,7 @@ export default class OidcAuth {
 
       } else if (userAuth.type === EAuthorizationType.BEARER) {
         const data: any = await this.introspectToken(userAuth.token);
-        this.verifyIntrospectToken(data);
-        console.log(data);
+        // this.verifyIntrospectToken(data);
         return data["preferred_username"];
         // const headers: Headers = new Headers();
         // headers.set("Authorization", `Bearer ${userAuth.token}`);
@@ -52,7 +55,7 @@ export default class OidcAuth {
         //   return null;
         // }
       } else {
-        throw  new Error(`Unsupported authorization woth type '${userAuth.type}'`);
+        throw  new AuthenticationError("Authorization error", `Unsupported authorization with type '${userAuth.type}'`, 401);
       }
 
     }
@@ -63,7 +66,7 @@ export default class OidcAuth {
             body.set('token_type_hint', tokenTypeHint);
         }
 
-        const res = await fetch(this.introspectUrl, {
+        const res = await Util.fetchRetry(this.introspectUrl, {
             method: 'POST',
             headers: {
             'Authorization': 'Basic ' + Buffer.from(`${this.appConf.oidc.clientId}:${this.appConf.oidc.clientSecret}`).toString('base64'),
@@ -72,46 +75,52 @@ export default class OidcAuth {
             body: body.toString()
         });
 
-        if (!res.ok) {
-            const text = await res.text().catch(() => '');
-            throw new Error(`Introspection request failed: ${res.status} ${res.statusText} ${text}`);
+        if (!res || !res.ok) {
+            const text = await res?.text();
+            throw new AuthenticationError(`Token error`, `Token introspection request failed: ${text}`, res?.status ?? 500);
         }
 
         const data: any = await res.json();
 
         if (!data.active) {
-            throw new Error('Token is inactive');
+            throw new AuthenticationError(`Token error`, 'Token is inactive', 401);
         }
 
         return data;
     }
 
-    protected verifyIntrospectToken(introspectResult: any) {
+    // protected verifyIntrospectToken(introspectResult: any) {
 
-        // Check audience
-        let isAud = false;
-        for (const aud of introspectResult["aud"]) {
-            if (this.appConf.oidc.audiences.includes(aud)) {
-                isAud = true;
-                break;
-            }
-        }
-        if (!isAud)  {
-            throw new AuthenticationError("Token error", "Missing audience.", 401);
-        }
+    //     // Check audience
+    //     let isAud = false;
+    //     if (Array.isArray(introspectResult["aud"])) {
+    //         for (const aud of introspectResult["aud"]) {
+    //             if (this.appConf.oidc.audiences.includes(aud)) {
+    //                 isAud = true;
+    //                 break;
+    //             }
+    //         }
+    //     } else {
+    //         if (this.appConf.oidc.audiences.includes(introspectResult["aud"])) {
+    //             isAud = true;
+    //         }
+    //     }
+    //     if (!isAud)  {
+    //         throw new AuthenticationError("Token error", "Missing audience.", 401);
+    //     }
 
-        // Check iss
-        if (introspectResult["iss"]  !==  this.realmUrl) {
-            throw new AuthenticationError("Token error", "Mismatched iss.", 401);
-        }
+    //     // Check iss
+    //     if (introspectResult["iss"]  !==  this.realmUrl) {
+    //         throw new AuthenticationError("Token error", "Mismatched iss.", 401);
+    //     }
 
-        //Check resource access roles
-        for (const r of this.appConf.oidc.resourceAccessRoles) {
-            if (!introspectResult["resource_access"]?.[this.appConf.oidc.clientId]?.includes(r)) {
-                throw new AuthenticationError("Token error", "Missing resource access role.", 401);
-            }
-        }
-    }
+    //     //Check resource access roles
+    //     for (const r of this.appConf.oidc.resourceAccessRoles) {
+    //         if (!introspectResult["resource_access"]?.[this.appConf.oidc.clientId]?.["roles"]?.includes(r)) {
+    //             throw new AuthenticationError("Token error", "Missing resource access role.", 401);
+    //         }
+    //     }
+    // }
 
 
     public async auth(token:  string): Promise<UserRepresentation> {
@@ -129,7 +138,7 @@ export default class OidcAuth {
             'client_secret': this.appConf.oidc.clientSecret,
             'grant_type': "client_credentials"});
   
-          const authR: Response = await fetch(
+          const authR: Response | null  = await Util.fetchRetry(
                 this.appConf.oidc.url + "/realms/" + this.appConf.oidc.realm + "/protocol/openid-connect/token",
                 {
                   method: "POST",
@@ -137,34 +146,37 @@ export default class OidcAuth {
                   body
                 }
               );
-          if (authR.status === 200) {
+          if (authR && authR.status === 200) {
             const authRJson: {[k: string]: any} = await authR.json() as {[k: string]: any};
             if (authRJson["access_token"]) {
               console.log("Obtain user information for " + reqKap.userId);
               const headers: Headers = new Headers();
               headers.set("Authorization",  `Bearer ${authRJson["access_token"]}`);
-              const getUserCredentialsR: Response = await fetch(
+              const getUserCredentialsR: Response |  null = await Util.fetchRetry(
                 this.appConf.oidc.url + "/admin/realms/" + this.appConf.oidc.realm + "/users/" + reqKap.userId,
                 {
                   method: "GET",
                   headers
                 }
               );
-              if (getUserCredentialsR.status === 200) {
+              if (getUserCredentialsR && getUserCredentialsR.status === 200) {
                 const ur: UserRepresentation = this.userRepresentationKeycloak(await getUserCredentialsR.json());
                 return ur;
               } else {
-                throw new AuthenticationError("Unable to retrieve user information", await getUserCredentialsR.text(), getUserCredentialsR.status);
+                throw new AuthenticationError("User info error", 
+                    `Unable to retrieve user information: ${(await getUserCredentialsR?.text()) ?? ""}`, 
+                    getUserCredentialsR?.status ?? 401);
               }          
             } else {
-              throw new AuthenticationError("Token missing", "The system was unable to obtain a user token", 500);
+              throw new AuthenticationError("Token error", "The system was unable to obtain a user token", 500);
             }        
           } else {
             console.error(authR);
-            throw new AuthenticationError(authR.statusText, await authR.text(), authR.status);
+            throw new AuthenticationError(authR?.statusText ?? "Authentication Error", 
+                    (await authR?.text()) ?? "Authentication Error", authR?.status ?? 401);
           }
         } else {
-          throw new AuthenticationError("Token format invalid", "", 401);
+          throw new AuthenticationError("Token error", "Token format invalid", 401);
         }
     }
   

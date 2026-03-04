@@ -285,96 +285,100 @@ export default class KubeManager {
     }
 
     public async details(props: DetailsProps, userId: string): Promise<KubeOpReturn<JobDetails | null>> {
-        if (props.jobName) {
-            const jn = this.getInternalJobName(userId, props.jobName);
-            const namespace = this.getNamespace();
-            const r: V1Job = await this.k8sApi.readNamespacedJob({ name: jn, namespace });
-                if (this.userOwnsJob(userId, r)) {
-                    const pods = await this.k8sCoreApi.listNamespacedPod({ namespace, labelSelector: `job-name=${jn}` });
-                    const pod = pods.items[0]; 
-                    if (pod) {
-                        let executionDuration: number | null = null;
-                        if (pod.status?.containerStatuses?.[0]?.state?.terminated?.startedAt && 
-                            pod.status?.containerStatuses?.[0]?.state?.terminated?.finishedAt) {
-                            executionDuration = Math.round((pod.status?.containerStatuses?.[0]?.state?.terminated?.finishedAt.getTime() -
-                                pod.status?.containerStatuses?.[0]?.state?.terminated?.startedAt.getTime())/1000);
-                        }
-                        const errors: string[] = [];
-                        const jobErrors: JobErrors = await this.getJobErrors(userId, props.jobName);
-                        if (jobErrors.containerError) {
-                            const msg = jobErrors.containerError.message ? ` Message: '${jobErrors.containerError.message}'.` : "";
-                            const reason = jobErrors.containerError.reason ? ` Reason: '${jobErrors.containerError.reason}'.` : "";
-                            errors.push(`Container error with exit code '${jobErrors.containerError.exitCode}'.${reason}${msg}`);
-                        }
-                        errors.push(...jobErrors.clusterWarnings.map(cw => {
-                            const msg = cw.message ? ` Message: '${cw.message}'.` : "";
-                            const reason = cw.reason ? ` Reason: '${cw.reason}'.` : "";
-                            return `Cluster error.${reason}${msg}`;
-                        }));
-                        const env: JobDetailsEnv[] | undefined = pod.spec?.containers[0]?.env
-                                            ?.filter((e: V1EnvVar) => e.valueFrom === undefined)
-                                            ?.map((e: V1EnvVar) => { return {
-                                                name: e.name,
-                                                value: e.value !== undefined ? e.value : null
-                                            }});
-                        const finishedAt = pod.status?.containerStatuses?.[0]?.state?.terminated?.finishedAt?.toISOString() ?? null;
-                        let usage: JobDetailsResourcesUsage | null = null;
-                        if (finishedAt) {
-                            usage = KubeManager.RESOURCE_USAGE_FINISHED;
-                        } else {
-                            usage = pod.metadata?.name ? await this.getResourcesUsage(jn, pod.metadata?.name) : null;
-                        }
-                        const jd: JobDetails = { name: props.jobName,//r.metadata?.name ?? "<Unknown>",
-                            uid: r.metadata?.uid ?? null,
-                            status: await this.getStatusJob(r.metadata?.name ?? "", r.status, userId),
-                            createdAt: r.metadata?.creationTimestamp?.toISOString() ?? null,
-                            position: 0,//jobsQueue?.data?.["jobs"]?.find(j => j.name === jn && j.user === this.getUsername())?.
-                            flavor: r.metadata?.annotations?.["chaimeleon.eu/jobResourcesFlavor"] ?? "-",
-                            exitCode: pod.status?.containerStatuses?.[0]?.state?.terminated?.exitCode ?? null,
-                            startedAt: pod.status?.containerStatuses?.[0]?.state?.running?.startedAt?.toISOString() 
-                                ?? pod.status?.containerStatuses?.[0]?.state?.terminated?.startedAt?.toISOString() ?? null,
-                            finishedAt,
-                            executionDuration,
-                            errors,
-                            user: r.metadata?.annotations?.[this.settings.job.userNameAnnotation] ?? null,
-                            image: pod.spec?.containers[0]?.image ?? null,
-                            privileged: pod.spec?.containers[0]?.securityContext?.privileged !== undefined 
-                                            ? pod.spec?.containers[0]?.securityContext?.privileged : null,
-                            mounts: pod.spec?.containers[0]?.volumeMounts
-                                        ?.map((v: V1VolumeMount) => { return {
-                                                source: v.name,
-                                                mountPath: v.mountPath,
-                                                readOnly: v.readOnly !== undefined ? v.readOnly : null
-                                            };}) ?? [],
-                            env: env !== undefined ? env : null,
-                            command: pod.spec?.containers[0]?.command !== undefined ? pod.spec?.containers[0]?.command : null,
-                            args: pod.spec?.containers[0]?.args !== undefined ? pod.spec?.containers[0]?.args : null,
-                            host: {
-                                serverName: this.settings.defaultKubeURL ? this.settings.defaultKubeURL : (this.clusterConfig.getCurrentCluster()?.server ?? null),
-                                uid: pod.spec?.containers[0]?.securityContext?.runAsUser === undefined ? 
-                                    (pod.spec?.securityContext?.runAsUser === undefined ? null 
-                                        : pod.spec?.securityContext?.runAsUser) 
-                                    : pod.spec?.containers[0]?.securityContext?.runAsUser,
-                                gid:  pod.spec?.containers[0]?.securityContext?.runAsGroup === undefined ? 
-                                    (pod.spec?.securityContext?.runAsGroup === undefined ? null 
-                                        : pod.spec?.securityContext?.runAsGroup) 
-                                    : pod.spec?.containers[0]?.securityContext?.runAsGroup,
-                                user: null
-                            },
-                            resources: {
-                                usage
+        try {
+            if (props.jobName) {
+                const jn = this.getInternalJobName(userId, props.jobName);
+                const namespace = this.getNamespace();
+                const r: V1Job = await this.k8sApi.readNamespacedJob({ name: jn, namespace });
+                    if (this.userOwnsJob(userId, r)) {
+                        const pods = await this.k8sCoreApi.listNamespacedPod({ namespace, labelSelector: `job-name=${jn}` });
+                        const pod = pods.items[0]; 
+                        if (pod) {
+                            let executionDuration: number | null = null;
+                            if (pod.status?.containerStatuses?.[0]?.state?.terminated?.startedAt && 
+                                pod.status?.containerStatuses?.[0]?.state?.terminated?.finishedAt) {
+                                executionDuration = Math.round((pod.status?.containerStatuses?.[0]?.state?.terminated?.finishedAt.getTime() -
+                                    pod.status?.containerStatuses?.[0]?.state?.terminated?.startedAt.getTime())/1000);
                             }
+                            const errors: string[] = [];
+                            const jobErrors: JobErrors = await this.getJobErrors(userId, props.jobName);
+                            if (jobErrors.containerError) {
+                                const msg = jobErrors.containerError.message ? ` Message: '${jobErrors.containerError.message}'.` : "";
+                                const reason = jobErrors.containerError.reason ? ` Reason: '${jobErrors.containerError.reason}'.` : "";
+                                errors.push(`Container error with exit code '${jobErrors.containerError.exitCode}'.${reason}${msg}`);
+                            }
+                            errors.push(...jobErrors.clusterWarnings.map(cw => {
+                                const msg = cw.message ? ` Message: '${cw.message}'.` : "";
+                                const reason = cw.reason ? ` Reason: '${cw.reason}'.` : "";
+                                return `Cluster error.${reason}${msg}`;
+                            }));
+                            const env: JobDetailsEnv[] | undefined = pod.spec?.containers[0]?.env
+                                                ?.filter((e: V1EnvVar) => e.valueFrom === undefined)
+                                                ?.map((e: V1EnvVar) => { return {
+                                                    name: e.name,
+                                                    value: e.value !== undefined ? e.value : null
+                                                }});
+                            const finishedAt = pod.status?.containerStatuses?.[0]?.state?.terminated?.finishedAt?.toISOString() ?? null;
+                            let usage: JobDetailsResourcesUsage | null = null;
+                            if (finishedAt) {
+                                usage = KubeManager.RESOURCE_USAGE_FINISHED;
+                            } else {
+                                usage = pod.metadata?.name ? await this.getResourcesUsage(jn, pod.metadata?.name) : null;
+                            }
+                            const jd: JobDetails = { name: props.jobName,//r.metadata?.name ?? "<Unknown>",
+                                uid: r.metadata?.uid ?? null,
+                                status: await this.getStatusJob(r.metadata?.name ?? "", r.status, userId),
+                                createdAt: r.metadata?.creationTimestamp?.toISOString() ?? null,
+                                position: 0,//jobsQueue?.data?.["jobs"]?.find(j => j.name === jn && j.user === this.getUsername())?.
+                                flavor: r.metadata?.annotations?.["chaimeleon.eu/jobResourcesFlavor"] ?? "-",
+                                exitCode: pod.status?.containerStatuses?.[0]?.state?.terminated?.exitCode ?? null,
+                                startedAt: pod.status?.containerStatuses?.[0]?.state?.running?.startedAt?.toISOString() 
+                                    ?? pod.status?.containerStatuses?.[0]?.state?.terminated?.startedAt?.toISOString() ?? null,
+                                finishedAt,
+                                executionDuration,
+                                errors,
+                                user: r.metadata?.annotations?.[this.settings.job.userNameAnnotation] ?? null,
+                                image: pod.spec?.containers[0]?.image ?? null,
+                                privileged: pod.spec?.containers[0]?.securityContext?.privileged !== undefined 
+                                                ? pod.spec?.containers[0]?.securityContext?.privileged : null,
+                                mounts: pod.spec?.containers[0]?.volumeMounts
+                                            ?.map((v: V1VolumeMount) => { return {
+                                                    source: v.name,
+                                                    mountPath: v.mountPath,
+                                                    readOnly: v.readOnly !== undefined ? v.readOnly : null
+                                                };}) ?? [],
+                                env: env !== undefined ? env : null,
+                                command: pod.spec?.containers[0]?.command !== undefined ? pod.spec?.containers[0]?.command : null,
+                                args: pod.spec?.containers[0]?.args !== undefined ? pod.spec?.containers[0]?.args : null,
+                                host: {
+                                    serverName: this.settings.defaultKubeURL ? this.settings.defaultKubeURL : (this.clusterConfig.getCurrentCluster()?.server ?? null),
+                                    uid: pod.spec?.containers[0]?.securityContext?.runAsUser === undefined ? 
+                                        (pod.spec?.securityContext?.runAsUser === undefined ? null 
+                                            : pod.spec?.securityContext?.runAsUser) 
+                                        : pod.spec?.containers[0]?.securityContext?.runAsUser,
+                                    gid:  pod.spec?.containers[0]?.securityContext?.runAsGroup === undefined ? 
+                                        (pod.spec?.securityContext?.runAsGroup === undefined ? null 
+                                            : pod.spec?.securityContext?.runAsGroup) 
+                                        : pod.spec?.containers[0]?.securityContext?.runAsGroup,
+                                    user: null
+                                },
+                                resources: {
+                                    usage
+                                }
+                            }
+                            return new KubeOpReturn(KubeOpReturnStatus.Success, undefined, jd);
+                        } else {
+                            return new KubeOpReturn(KubeOpReturnStatus.Error, `Can't get the pods list for job '${props.jobName}'`, null);
                         }
-                        return new KubeOpReturn(KubeOpReturnStatus.Success, undefined, jd);
-                    } else {
-                        return new KubeOpReturn(KubeOpReturnStatus.Error, `Can't get the pods list for job '${props.jobName}'`, null);
-                    }
 
-                } else {
-                    return  new KubeOpReturn(KubeOpReturnStatus.Error, `Job '${props.jobName}' not found.`, null);
-                }
-        } else {
-            return new KubeOpReturn(KubeOpReturnStatus.Error, "Job name required", null);
+                    } else {
+                        return  new KubeOpReturn(KubeOpReturnStatus.Error, `Job '${props.jobName}' not found.`, null);
+                    }
+            } else {
+                return new KubeOpReturn(KubeOpReturnStatus.Error, "Job name required", null);
+            }
+        } catch (e) {
+            return this.handleKubeOpsError(e);
         }
     }
 
@@ -759,14 +763,24 @@ export default class KubeManager {
     // }
 
     protected handleKubeOpsError(e: any): KubeOpReturn<null> {
+        console.log(JSON.stringify(e));
         // if (e instanceof HttpError) {
         //     return new KubeOpReturn(KubeOpReturnStatus.Error, `Error message from Kubernetes: ${e.body.message}`, null);
         // } else 
-            if (e instanceof Error || e instanceof KubeException || e instanceof ParameterException) {
+        if (e.body && typeof e.body === "string") {
+            try {
+                const b = JSON.parse(e.body);
+                console.log(b);
+                if (b.message) {
+                    return new KubeOpReturn(KubeOpReturnStatus.Error, b.message, null);
+                }
+            } catch (parseErr) {
+                console.error(parseErr);
+            } 
+        } else if ("message" in e) {
             return new KubeOpReturn(KubeOpReturnStatus.Error, e.message, null);
-        } else {
-            return new KubeOpReturn(KubeOpReturnStatus.Error, `Unknown error: ${JSON.stringify(e)}`, null);
         }
+        return new KubeOpReturn(KubeOpReturnStatus.Error, `Unknown error: ${JSON.stringify(e)}`, null);
 
     }
 
