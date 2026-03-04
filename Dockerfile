@@ -1,25 +1,23 @@
-FROM debian:sid-slim
+FROM node:24-alpine
 
 LABEL name=jobman-webservice
 LABEL authors="Andy S Alic (asalic)"
 
-RUN apt-get -y update \
-    && apt-get -y install curl bash vim \
-    && curl -fsSL https://deb.nodesource.com/setup_22.x | bash - \
-    && apt-get install -y nodejs
-
-COPY jest.config.* package.json tsconfig.json /opt/jobman/
+COPY jest.config.* package.json tsconfig.json README.md LICENSE OpenAPI-3.1-specs.json /opt/jobman/
 COPY src /opt/jobman/src
 COPY bin /opt/jobman/bin
 
-RUN cd /opt/jobman/ \
-    && npm install \
+WORKDIR /opt/jobman
+
+RUN npm install \
     && npx tsc \
+    && rm -rf /root/.npm \
     && ln -s /opt/jobman/bin/jobman-webservice /usr/bin/ \
     && chmod +x /opt/jobman/bin/jobman-webservice \
-    && addgroup jobman --gid 1001 && useradd -m -u 1001 -g jobman jobman
+    && addgroup -g 1001 jobman \
+    && adduser -D -u 1001 -G jobman jobman
 
-ENV SETTINGS_FILE /opt/jobman/src/webservice/settings.json
+ENV SETTINGS_FILE=/opt/jobman/src/webservice/settings.json
 
 USER jobman
 

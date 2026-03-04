@@ -3,7 +3,6 @@ import util  from 'node:util';
 import { Table } from "console-table-printer";
 import RestService from "./RestService.js";
 import type { SettingsClient } from "../model/SettingsClient.js";
-import QueueResult from "../../common/model/QueueResult.js";
 import { KubeOpReturn, KubeOpReturnStatus } from "../../common/model/KubeOpReturn.js";
 import type ImageDetailsProps from "../../common/model/args/ImageDetailsProps.js";
 import type SubmitProps from "../../common/model/args/SubmitProps.js";
@@ -12,10 +11,12 @@ import type LogProps from "../../common/model/args/LogProps.js";
 import type DeleteProps from "../../common/model/args/DeleteProps.js";
 import type KubeResourcesFlavor from "../../common/model/KubeResourcesFlavor.js";
 import JobInfo from "../../common/model/JobInfo.js";
-import TerminalRenderer from "marked-terminal";
+
+import { markedTerminal } from 'marked-terminal';
 import type QueueResultDisplay from "../../common/model/QueueResultDisplay.js";
 import type Page from "../../common/model/Page.js";
-import type ImageRepo from "../../common/model/ImageRepo.js";
+import type { Dictionary } from "console-table-printer/dist/src/models/common.js";
+import type ImageDetails from "../../common/model/ImageDetails.js";
 
 type SimpleMsgCallbFunction = (...args: any[]) => void;
 
@@ -59,30 +60,30 @@ export default class DisplayService {
                                 {
                                     name: "Flavor",
                                     maxLen: Math.floor(totalNoColsAvailable * 0.45),
-                                    function: (row: QueueResult) => row.flavor ?? "<no label>",
+                                    function: (row: Dictionary) => row["flavor"] ?? "<no label>",
                                     alignment: 'center'
                                 },
                                 {
                                     name: "CPUs/Memory/GPUs",
                                     maxLen: Math.floor(totalNoColsAvailable * 0.25),
-                                    function: (row: QueueResult) => `${row.cpu ?? "-"}/${row.memory ?? "-"}/${row.gpu ?? "-"}`, 
+                                    function: (row: Dictionary) => `${row["cpu"] ?? "-"}/${row["memory"] ?? "-"}/${row["gpu"] ?? "-"}`, 
                                     alignment: 'center'
                                 },
                                 {
                                     name: "Jobs pending",
                                     maxLen: Math.floor(totalNoColsAvailable * 0.15),
-                                    function: (row: QueueResult) => row.totalPending,
+                                    function: (row: Dictionary) => row["totalPending"],
                                     alignment: 'center'
                                 },
                                 {
                                     name: "Jobs running",
                                     maxLen: Math.floor(totalNoColsAvailable * 0.15),
-                                    function: (row: QueueResult) => row.totalRunning,
+                                    function: (row: Dictionary) => row["totalRunning"],
                                     alignment: 'center'
                                 }
                             ]
                         });
-                        t.addRows(Object.values(r.payload.result));
+                        t.addRows(Object.values(r.payload?.result ?? []));
                         t.printTable();
                         console.log(`Last queue update on: ${new Intl.DateTimeFormat('en', { year: 'numeric', month: 'short', day: '2-digit', hour: '2-digit', minute: '2-digit', second: '2-digit' }).format(new Date(r.payload.updated))}`)
                     } else {
@@ -113,24 +114,24 @@ export default class DisplayService {
                             {
                                 name: "Tags List",
                                 maxLen: Math.floor(totalNoColsAvailable * 0.7),
-                                function: (row: ImageRepo) => row.artifacts.map(a => a.tags.join(" ")).join("  "), 
+                                function: (row: Dictionary) => row["artifacts"].map((a: ImageDetails) => a.tags.join(" ")).join("  "), 
                                 alignment: 'left'
                             }
                         ]
                     });
-                    t.addRows(r.payload?.data);
+                    t.addRows(r.payload?.data ?? []);
                     t.printTable();
                 }))
                 .catch(e => this.simpleMsg(new KubeOpReturn(KubeOpReturnStatus.Error,  e.message ?? String(e), null)));
     }
 
     public imageDetails(props: ImageDetailsProps): void {
-        //marked.use(markedTerminal());
+        marked.use(markedTerminal());
 
-        marked.setOptions({
-            // Define custom renderer
-            renderer: new TerminalRenderer()
-          });
+        // marked.setOptions({
+        //     // Define custom renderer
+        //     renderer: new TerminalRenderer()
+        //   });
         this.km.imageDescription(props)
             .then(r => this.simpleMsg(r,  () => console.log(marked(r.payload ?? "&lt;__No description available__&gt;"))))
             .catch(e => this.simpleMsg(new KubeOpReturn(KubeOpReturnStatus.Error,  e.message ?? String(e), null)));
@@ -199,13 +200,13 @@ export default class DisplayService {
                             {
                                 name: "Creation Date",
                                 maxLen: Math.floor(totalNoColsAvailable * 0.30),
-                                function: (row: JobInfo) => row.createdAt ? new Intl.DateTimeFormat('en-GB', this.options)
-                                                .format(new Date(row.createdAt)) : "-",
+                                function: (row: Dictionary) => row["createdAt"] ? new Intl.DateTimeFormat('en-GB', this.options)
+                                                .format(new Date(row["createdAt"])) : "-",
                                 alignment: 'center'
                             }
                         ]
                     });
-                    t.addRows(r.payload?.data);
+                    t.addRows(r.payload?.data ?? []);
                     t.printTable();
                 }))
             .catch(e => this.simpleMsg(new KubeOpReturn(KubeOpReturnStatus.Error,  e.message ?? String(e), null)));
@@ -266,27 +267,27 @@ export default class DisplayService {
                             {
                                 name: "CPU*",
                                 maxLen: Math.floor(totalNoColsAvailable * 0.15),
-                                function: (row: KubeResourcesFlavor) => `${row.resources?.requests?.["cpu"] ?? "-"} / ${row.resources?.limits?.["cpu"] ?? "-"}`,
+                                function: (row: Dictionary) => `${row["resources"]?.requests?.["cpu"] ?? "-"} / ${row["resources"]?.limits?.["cpu"] ?? "-"}`,
                                 alignment: 'center'
                             },
                             {
                                 name: "Memory*",
                                 maxLen: Math.floor(totalNoColsAvailable * 0.15),
-                                function: (row: KubeResourcesFlavor) => `${row.resources?.requests?.["memory"] ?? "-"} / ${row.resources?.limits?.["memory"] ?? "-"}`,
+                                function: (row: Dictionary) => `${row["resources"]?.requests?.["memory"] ?? "-"} / ${row["resources"]?.limits?.["memory"] ?? "-"}`,
                                 alignment: 'center'
                             },
                             {
                                 name: "GPU**",
                                 maxLen: Math.floor(totalNoColsAvailable * 0.15),
-                                function: (row: KubeResourcesFlavor) => 
-                                    `${row.resources?.requests?.["nvidia.com/gpu"] ?? "-"}`
-                                    + ` / ${row.resources?.requests?.["amd.com/gpu"] ?? "-"}`
-                                    + ` / ${row.resources?.requests?.["intel.com/gpu"] ?? "-"}`,
+                                function: (row: Dictionary) => 
+                                    `${row["resources"]?.requests?.["nvidia.com/gpu"] ?? "-"}`
+                                    + ` / ${row["resources"]?.requests?.["amd.com/gpu"] ?? "-"}`
+                                    + ` / ${row["resources"]?.requests?.["intel.com/gpu"] ?? "-"}`,
                                 alignment: 'center'
                             }
                         ]
                     });
-                    t.addRows(r.payload?.data);
+                    t.addRows(r.payload?.data ?? []);
                     t.printTable();
                     console.log();
                     console.log("*First value is for request, second for limits");
