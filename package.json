@@ -12,6 +12,7 @@
   },
   "description": "The Kubernetes job manager",
   "dependencies": {
+    "node-fetch": "3.3.2",
     "swagger-ui-express": "5.0.1",
     "swagger-jsdoc": "6.2.8",
     "@kubernetes/client-node": "1.4.0",
