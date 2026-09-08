@@ -1,15 +1,13 @@
 import HttpErrors from 'http-errors';
-//import BodyParser from 'body-parser';
-//import CookieParser from 'cookie-parser';
 import express from 'express';
 import type { Express, Request, Response, NextFunction } from 'express';
 import type { ErrorRequestHandler } from "express";
-//import path from "node:path";
-//import 'dotenv/config';
-//import fs from "node:fs";
 import { parseArgs } from 'node:util';
 import swaggerJsdoc from 'swagger-jsdoc';
 import swaggerUi from 'swagger-ui-express';
+import path from 'path';
+import { fileURLToPath } from 'url';
+import fs from "node:fs";
 
 
 import { exit } from 'node:process';
@@ -41,7 +39,14 @@ const oidcAuth = new OidcAuth(appConf);
 const km = new KubeManager(appConf);
 const hm = new HarborManager(appConf);
 // /const appConfig = AppConfig.get();
-console.log(`Jobman web service version '${process.env["npm_package_version"]}'`);
+let version = "unknown"
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+try {
+  version = JSON.parse(fs.readFileSync(path.join(__dirname, "../..", 'package.json'), {encoding: 'utf8'}))?.version;
+} catch (e: any) {
+  console.error(`Cannot load version from package.json: ${e.message}`)
+}
+console.log(`Jobman web service version '${version}'`);
 const app: Express = express();
 
 

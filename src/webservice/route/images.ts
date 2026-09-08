@@ -67,7 +67,7 @@ const imagesRouter = function(oidcAuth: OidcAuth, hm: HarborManager) {
     *              schema:
     *                $ref: '#/components/schemas/ErrorResponse'
      */
-    routerObj.get('/:imageName/description', async (req: Request, res: Response, next: NextFunction) => {
+    routerObj.get('/:imageName/description/', async (req: Request, res: Response, next: NextFunction) => {
       commonRequest<string | null>(req, res, next, oidcAuth, hm.imageDetails.bind(hm, { image: pathParam(req, "imageName") }));
     });
 

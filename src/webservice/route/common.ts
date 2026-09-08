@@ -5,13 +5,14 @@ import type OidcAuth from '../service/OidcAuth.js';
 import type AbstractDto from '../../common/model/AbstractDto.js';
 import type ErrorResponse from '../../common/model/ErrorResponse.js';
 
-export async function commonRequest<T extends AbstractDto | string | null>(req: Request, res: Response, next: NextFunction, oidcAuth: OidcAuth, method: Function) {
+export async function commonRequest<T extends AbstractDto | string | null>(req: Request, 
+      res: Response, next: NextFunction, oidcAuth: OidcAuth, method: Function) {
     let payload: KubeOpReturn<T | null> | null = null;
     let respPayload: ErrorResponse | any = null;
     let sc: number = 501;
     try {
-      const username: string  | null = await oidcAuth.authenticateAndAuthorize(req);
-      if (username) {
+      const username: string | null = await oidcAuth.authenticateAndAuthorize(req);
+      if (username !== null && username !== undefined && username.length > 0) {
         payload = (await method(username));//km[kmMethodName]();
         if (payload?.status === KubeOpReturnStatus.Error) {
           sc = 400;
