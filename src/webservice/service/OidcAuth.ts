@@ -127,7 +127,7 @@ export default class OidcAuth {
             const ur: UserRepresentation = this.userRepresentationKeycloak(await getUserCredentialsR.json());
             return ur;
           } else {
-            console.error(`Unable to retrieve user information: ${(await getUserCredentialsR?.text()) ?? ""}`);
+            console.error(`Unable to retrieve user information (status ${getUserCredentialsR?.status}): ${(await getUserCredentialsR?.text()) ?? ""}`);
             throw new AuthenticationError("User info error", "User info error",
               getUserCredentialsR?.status ?? 401);
           }
@@ -153,8 +153,6 @@ export default class OidcAuth {
     else throw new AuthenticationError("Missing field", "Missing field 'username' from Keycloak authentication response", 500);
     if (resp["enabled"]) { result["enabled"] = Boolean(resp["enabled"]); }
     else throw new AuthenticationError("Missing field", "Missing field 'enabled' from Keycloak authentication response", 500);
-    // if (resp["email"]) { result["email"] = resp["email"]; }
-    // else throw new AuthenticationError("Missing field", "Missing field 'email' from Keycloak authentication response", 500);
     if (resp["attributes"]?.[this.appConf.oidc.apiTokenAttributeName]) {
       result["apiToken"] = JSON.parse(atob(resp["attributes"]?.[this.appConf.oidc.apiTokenAttributeName])) as KeycloakApiToken;
     } else {
