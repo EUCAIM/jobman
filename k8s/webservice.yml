@@ -202,9 +202,6 @@ spec:
       labels:
         app: jobman-service-deployment
     spec:
-      priorityClassName: core-services
-      nodeSelector:
-        chaimeleon.eu/target: core-services
       serviceAccountName: jobman-serviceaccount
       securityContext:
         runAsNonRoot: true
@@ -212,8 +209,8 @@ spec:
         runAsGroup: 1001
         fsGroup: 2000
       containers:
-      - image: jobman-service:2.2.7-BETA
-        imagePullPolicy: Always
+      - image: jobman-service:2.2.10-BETA
+        imagePullPolicy: IfNotPresent
         securityContext:
           allowPrivilegeEscalation: false
           capabilities:
@@ -225,11 +222,11 @@ spec:
           value: /opt/jobman/settings.json
         resources:
           requests:
-            memory: "4Gi"
-            cpu: "1"
+            memory: "2Gi"
+            cpu: "250m"
           limits:
-            memory: "4Gi"
-            cpu: "1"
+            memory: "2Gi"
+            cpu: "500m"
         ports:
         - containerPort: 8080
           name: api
