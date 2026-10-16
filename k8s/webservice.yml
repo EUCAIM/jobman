@@ -202,24 +202,31 @@ spec:
       labels:
         app: jobman-service-deployment
     spec:
-      priorityClassName: core-services
-      nodeSelector:
-        chaimeleon.eu/target: core-services
       serviceAccountName: jobman-serviceaccount
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1001
+        runAsGroup: 1001
+        fsGroup: 2000
       containers:
-      - image: harbor.chaimeleon-eu.i3m.upv.es/chaimeleon-services/jobman-service:2.2.2
-        imagePullPolicy: Always
-        name: jobman-service-deployment-container
+      - image: jobman-service:2.2.10-BETA
+        imagePullPolicy: IfNotPresent
+        securityContext:
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop: ["ALL"]
+          readOnlyRootFilesystem: true
+        name: jobman
         env:
         - name: SETTINGS_FILE
           value: /opt/jobman/settings.json
         resources:
           requests:
-            memory: "4Gi"
-            cpu: "1"
+            memory: "2Gi"
+            cpu: "250m"
           limits:
-            memory: "4Gi"
-            cpu: "1"
+            memory: "2Gi"
+            cpu: "500m"
         ports:
         - containerPort: 8080
           name: api
@@ -231,27 +238,3 @@ spec:
       - name: webservice-configmap
         configMap:
           name: webservice-config
-
----
-
-kind: Ingress
-apiVersion: networking.k8s.io/v1
-metadata:
-  name: jobman-ingress
-  namespace: jobman-service
-  annotations:
-    kubernetes.io/ingress.class: nginx
-    nginx.ingress.kubernetes.io/backend-protocol: HTTP
-    nginx.ingress.kubernetes.io/enable-cors: 'true'
-spec:
-  rules:
-    - host: <jobman_host>
-      http:
-        paths:
-          - path: /jobman-service/
-            pathType: Prefix
-            backend:
-              service:
-                name: jobman-service
-                port:
-                  number: 8080

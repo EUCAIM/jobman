@@ -98,6 +98,9 @@ spec:
       backoffLimit: 0
       template:
         spec:
+          metadata:
+            labels:
+              app: jobman-queue-position
           priorityClassName: core-services
           nodeSelector:
             chaimeleon.eu/target: core-services
@@ -105,7 +108,7 @@ spec:
           serviceAccountName: jobman-queue-position
           containers:
             - name: jobman-queue-position-pod
-              image: alpine/k8s:1.27.1
+              image: alpine/k8s:1.36.4
               imagePullPolicy: IfNotPresent
               envFrom:
               - configMapRef: 

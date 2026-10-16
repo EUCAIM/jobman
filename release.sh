@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/sh
 
 SCRIPT_DIR=$(dirname "$(readlink -f "$0")")
 JOBMAN_VER=$(jq -r '.version' $SCRIPT_DIR/package.json)
@@ -12,13 +12,13 @@ cp -r $SCRIPT_DIR/src/common $RELEASE_DIR/src
 
 
 if [ "$1" == "webservice" ]; then
-    cp -r $SCRIPT_DIR/src/webserver $RELEASE_DIR/src
+    cp -r $SCRIPT_DIR/src/webservice $RELEASE_DIR/src
     # cp -r $SCRIPT_DIR/src/webserver/settings.json $RELEASE_DIR/settings.json
     cp -r $SCRIPT_DIR/src/k8s-logger $RELEASE_DIR/src
     cp $SCRIPT_DIR/bin/jobman-k8s-logger $SCRIPT_DIR/bin/jobman-webservice $RELEASE_DIR/bin
     #RELEASE_DIR=$RELEASE_DIR/jobman-server
     # SRC_ARR+=(("$SCRIPT_DIR/src/webservice" "/src"))
-    jq 'del(.dependencies.console-table-printer, .dependencies.marked, .dependencies.marked-terminal, .dependencies.zlib, .dependencies.compare-versions)' $SCRIPT_DIR/package.json > $RELEASE_DIR/package.json
+    jq 'del(.dependencies."console-table-printer", .dependencies.marked, .dependencies."marked-terminal", .dependencies.zlib, .dependencies."compare-versions")' $SCRIPT_DIR/package.json > $RELEASE_DIR/package.json
 elif [ "$1" == "client" ]; then
     #RELEASE_DIR=$RELEASE_DIR/jobman-client
     #SRC_ARR+=(("$SCRIPT_DIR/examples.md" "/") ("$SCRIPT_DIR/usage.md" "/") ("$SCRIPT_DIR/src/client" "$SCRIPT_DIR/bin/jobman")
@@ -43,5 +43,7 @@ npm run build
 rm -rf $RELEASE_DIR/node_modules
 npm install --omit=dev
 
-tar -czf jobman.tar.gz --transform='s|^|jobman/|' bin dist node_modules README.md package.json
+if [ "$1" == "client" ]; then
+    tar -czf jobman.tar.gz --transform='s|^|jobman/|' bin dist node_modules README.md package.json
+fi
 

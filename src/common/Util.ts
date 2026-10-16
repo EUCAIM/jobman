@@ -65,7 +65,7 @@ export default class Util {
                     if (!['EAI_AGAIN', 'ECONNRESET', 'ETIMEDOUT', 'ECONNREFUSED'].includes(e["code"])) { 
                         throw e; 
                     } else {
-                        console.warn(`Error code '${e["code"]}' when instrospecting token, attempt ${a}/${retry}, sleeping ${delayMs}ms`);
+                        console.warn(`Error code '${e["code"]}' when calling the endpoint ${url} attempt ${a}/${retry}, sleeping ${delayMs}ms`);
                         await new Promise(r => setTimeout(r, delayMs));
                     }
                 }

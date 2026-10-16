@@ -40,7 +40,7 @@
     },
     "harborProjects": [
             {
-                "name": "chaimeleon-library-batch",
+                "name": "library-name",
                 "token": null,
                 "baseUrl": "https://<docker-url-lib>",
                 "imagePullSecrets": [
@@ -56,12 +56,7 @@
         "realm": "CHAIMELEON",
         "clientId": "jobman-service",
         "clientSecret": "",
-        "audiences": [
-            "jobman-service"
-        ],
-        "resourceAccessRoles": [
-            "manage-own-jobs"
-        ]
+        "audience": "jobman-service"
     },
     "port": 9000,
     "path": {
