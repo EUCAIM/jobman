@@ -182,7 +182,11 @@ export default class HarborManager {
             for (const hp of this.settings.harborProjects) {
                 const projImgs: KubeOpReturn<ImageRepo[]>  = await this.getHarborImages(hp);
                 if (projImgs.isOk() && projImgs.payload) {
-                    const prefix = `${hp.baseUrl}/${hp.name}`
+                    let baseUrl = hp.baseUrl;
+                    if (hp.proxy !== null && hp.proxy !== undefined && hp.proxy !== "") {
+                        baseUrl = hp.proxy;
+                    }
+                    const prefix = `${baseUrl}/${hp.name}`
                     for (const projImg of projImgs.payload) {
                         const fullImgURL = `${prefix}/${projImg.name}`;
                         if (projImg.name === submitImageName || fullImgURL.endsWith(submitImageName)) {
@@ -227,6 +231,13 @@ export default class HarborManager {
             }
         } else {
             if (this.settings.job.defaultImage && this.settings.job.defaultImage.fullUrl) {
+                // Check if the default image's repo has a proxy defined, if so and this URL doesn't point to that, leave a warning
+                const defImgURL = this.settings.job.defaultImage.fullUrl.substring(0, this.settings.job.defaultImage.fullUrl.indexOf("/"));
+                const found = this.settings.harborProjects.find(hp => hp.baseUrl.endsWith(defImgURL));
+                if (found && found.proxy) {
+                    console.warn(`[WARN] The default image's repo (${defImgURL}) has a Docker proxy defined in the settings, but the default image uses the Harbor repository.`);
+                }
+                
                 return this.settings.job.defaultImage;
             } else {
                 throw new Error(`No default image defined by the platform. Please specify a valid input image.`)

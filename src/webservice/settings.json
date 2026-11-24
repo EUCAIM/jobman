@@ -43,6 +43,7 @@
                 "name": "library-name",
                 "token": null,
                 "baseUrl": "https://<docker-url-lib>",
+                "proxy": "<docker-proxy-url-lib_or_leave-nul-undefined-blank-for-no-proxy>",
                 "imagePullSecrets": [
                     {
                         "name": "<secret_name>"

@@ -93,6 +93,11 @@ export interface HarborProject {
     name: string;
     token?: string | null;
     imagePullSecrets?: ImagePullSecret[] | null | undefined;
+    /**
+     * A Docker proxy used only to retrieve the images used by the jobs
+     * Harbor remains the main site with the actual metadata, like users, quotas, artifact information etc. 
+     */
+    proxy?: string | null | undefined;
 }
 
 export interface PathInfo {
