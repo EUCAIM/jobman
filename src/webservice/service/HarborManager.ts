@@ -1,7 +1,4 @@
 
-import https from "https";
-import type { Response } from "node-fetch";
-
 import type ImageDetailsProps from "../../common/model/args/ImageDetailsProps.js";
 import { KubeOpReturnStatus, KubeOpReturn } from "../../common/model/KubeOpReturn.js";
 import type { SettingsWebService } from "../model/SettingsWebService.js";
@@ -30,11 +27,8 @@ export default class HarborManager {
         for (const hp of this.settings.harborProjects) {        
             const reposUrl = `${hp.baseUrl}/api/v2.0/projects/${hp.name}/repositories`;
             //console.log(`Getting repos from ${reposUrl}`);
-            const agent = new https.Agent({
-                rejectUnauthorized: false,
-            });
             const response: Response | null = await Util.fetchRetry(reposUrl, {
-                agent,
+                //agent,
                 ...hp.token && {headers: [["authorization", `Basic ${hp.token}`]]}
             });
             if (response?.ok) {
@@ -71,9 +65,6 @@ export default class HarborManager {
         const projsUrl = `${hp.baseUrl}/api/v2.0/projects`
         const reposUrl = `${projsUrl}/${hp.name}/repositories`;
         console.log(`Getting repos from ${reposUrl}`);
-        const agent = new https.Agent({
-            rejectUnauthorized: false,
-            });
         
         let pageNum = 1;
         let reposCnt = 0;
@@ -83,7 +74,6 @@ export default class HarborManager {
         do {
             const response: Response | null = await Util.fetchRetry(`${reposUrl}?page=${pageNum}&page_size=${pageSize}`, 
                 {
-                    agent,
                     ...hp.token && {headers: [["authorization", `Basic ${hp.token}`]]}
                 });
             if (response?.ok) {
@@ -99,7 +89,7 @@ export default class HarborManager {
                     const artsUrl = `${reposUrl}/${name}/artifacts`;
                     const rArtifacts: Response | null = await Util.fetchRetry(`${artsUrl}?page_size=${repo.artifact_count}`, 
                         {
-                            agent,
+                            //agent,
                             ...hp.token && {headers: [["authorization", `basic ${hp.token}`]]}
                         });
                     if (rArtifacts?.ok) {

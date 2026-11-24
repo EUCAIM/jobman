@@ -1,5 +1,4 @@
 import type { Request } from 'express';
-import { Headers, Response } from 'node-fetch';
 import * as jose from 'jose';
 import type UserRepresentation from "../model/UserRepresentation.js";
 import type KeycloakApiToken from "../model/KeycloakApiToken.js";
