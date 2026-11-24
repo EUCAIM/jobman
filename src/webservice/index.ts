@@ -64,10 +64,7 @@ app.use(
   `${appConf.path.prefix}/api-docs/`,
   swaggerUi.serve,
   swaggerUi.setup(swaggerSpec, {
-    explorer: true,
-    swaggerOptions: {
-      persistAuthorization: true
-    }
+    explorer: true
   })
 );
 app.use(express.json());
