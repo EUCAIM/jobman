@@ -57,7 +57,17 @@ In order to allow the fair use of the platform, the jobs are not allowed to run 
 
 ## Server
 
-The OpenAPI specification (Swagger UI) is available under the __/api-docs__ path (e.g. http://localhost:8080/api-docs), accessible when the server application has been started.
+The OpenAPI specification (Swagger UI) is available at the __/api-docs__ path (e.g. http://localhost:8080/api-docs), accessible when the server application has been started.
+The JSON file rendered by Swagger is available at __/swagger.json__.
+
+### Local SwaggerUI
+
+This repository contains a formatted example dump of the JSON available at __/api-docs__ (the [OpenAPI-3.1-specs.json](OpenAPI-3.1-specs.json)), although you should always launch the Jobman webservice to obtain the latest version.
+To render an OpenAPI JSON file with Swagger, just launch it with Docker i.e.:
+```
+    docker run --rm -d -p 8080:8080 -v <OpenAPI_JSON_file>:/openapi.json -e SWAGGER_JSON=/openapi.json --name jobman-webservice-swagger swaggerapi/swagger-ui:latest
+```
+Then, simply open a web browser and navigate to __http://localhost:8080/__
 
 ## Client
 
