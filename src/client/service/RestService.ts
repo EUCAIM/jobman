@@ -1,5 +1,3 @@
-import fetch from "node-fetch";
-
 import { KubeOpReturn, KubeOpReturnStatus } from "../../common/model/KubeOpReturn.js";
 import type QueueResultDisplay from "../../common/model/QueueResultDisplay.js";
 import type SubmitProps from "../../common/model/args/SubmitProps.js";

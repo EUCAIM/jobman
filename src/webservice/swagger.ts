@@ -4,6 +4,10 @@ import pkg from '../../package.json' with { type: 'json' };
 const swaggerOptions: Options = {
   definition: {
     openapi: '3.1.0',
+    externalDocs: {                
+      description: "swagger.json", 
+      url: "/swagger.json"
+    },
     info: {
       title: 'Jobman',
       version: pkg.version,

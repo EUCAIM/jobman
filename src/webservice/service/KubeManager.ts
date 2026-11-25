@@ -235,17 +235,17 @@ export default class KubeManager {
 
             // console.log( JSON.stringify(job, null, 2));
 
-            if (props.dryRun) {
-                return new KubeOpReturn(KubeOpReturnStatus.Success, "\n" + JSON.stringify(job, null, 2), "\n" + JSON.stringify(job, null, 2));
+            // if (props.dryRun) {
+            //     return new KubeOpReturn(KubeOpReturnStatus.Success, "\n" + JSON.stringify(job, null, 2), "\n" + JSON.stringify(job, null, 2));
 
-            } else {
-                await this.k8sApi.createNamespacedJob({ namespace, body: job });
-                return new KubeOpReturn(KubeOpReturnStatus.Success, 
-                    `Job named '${jn}' created successfully by user '${userId}'`, {
-                        jobName: this.getJobName(userId, jn)
-                    });
+            // } else {
+            await this.k8sApi.createNamespacedJob({ namespace, body: job });
+            return new KubeOpReturn(KubeOpReturnStatus.Success, 
+                `Job named '${jn}' created successfully by user '${userId}'`, {
+                    jobName: this.getJobName(userId, jn)
+                });
 
-            }
+            // }
             //}
         
         } catch (e) {

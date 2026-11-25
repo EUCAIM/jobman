@@ -4,8 +4,6 @@ import { fileURLToPath } from 'url';
 import EAnnotationType from './model/EAnnotationType.js';
 import UnhandledValueException from './model/exception/UnhandledValueException.js';
 import type Annotation from './model/Annotation.js';
-import fetch from "node-fetch";
-import type { RequestInit, Response } from "node-fetch";
 
 export default class Util {
 
